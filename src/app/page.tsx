@@ -52,6 +52,8 @@ const categories = [
   { icon: "🎉", name: "Loisirs" },
   { icon: "👕", name: "Vêtements" },
   { icon: "💰", name: "Épargne" },
+  { icon: "⚖️", name: "Poursuites" },
+  { icon: "📝", name: "Arrangements" },
   { icon: "📦", name: "Autre" },
 ];
 

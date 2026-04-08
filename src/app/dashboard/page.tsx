@@ -64,6 +64,8 @@ const CATEGORIES = [
   { id: "loisirs", icon: "🎉", name: "Loisirs" },
   { id: "vetements", icon: "👕", name: "Vêtements" },
   { id: "epargne", icon: "💰", name: "Épargne" },
+  { id: "poursuites", icon: "⚖️", name: "Poursuites" },
+  { id: "arrangements", icon: "📝", name: "Arrangements" },
   { id: "autre", icon: "📦", name: "Autre" },
 ] as const;
 
