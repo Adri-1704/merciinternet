@@ -25,6 +25,18 @@ const features = [
     description:
       "Vacances, 3e pilier, achat immobilier... Définissez vos objectifs et suivez votre progression.",
   },
+  {
+    icon: "📸",
+    title: "Scan de tickets",
+    description:
+      "Photographiez votre ticket de caisse et les dépenses sont ajoutées automatiquement grâce à l'IA.",
+  },
+  {
+    icon: "💼",
+    title: "Mode Indépendant",
+    description:
+      "Gérez vos factures clients, suivez vos encaissements et vos dépenses professionnelles.",
+  },
 ];
 
 const categories = [
@@ -96,7 +108,7 @@ export default function Home() {
 
         <div className="relative mx-auto max-w-4xl">
           <div className="animate-fade-in-up mb-6 inline-block rounded-full border border-violet-200 bg-violet-50 px-4 py-1.5 text-sm text-violet-600">
-            100% Suisse · CHF · Gratuit
+            Particuliers & Indépendants · 100% Suisse · CHF
           </div>
           <h1 className="animate-fade-in-up animate-delay-100 mb-6 text-5xl font-bold leading-tight tracking-tight text-indigo-950 md:text-7xl">
             Gérez votre budget
@@ -104,9 +116,9 @@ export default function Home() {
             <span className="gradient-text-violet">pour le prix d&apos;un verre de blanc</span>
           </h1>
           <p className="animate-fade-in-up animate-delay-200 mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl">
-            L&apos;app de budget pensée pour la Suisse. Simple, rapide, en
-            francs suisses. Catégories LAMal, 3e pilier, impôts, CFF, Coop,
-            Migros...
+            L&apos;app de budget pensée pour la Suisse. Pour les particuliers
+            et les indépendants. Catégories suisses, scan de tickets, gestion
+            des factures clients.
           </p>
           <div className="animate-fade-in-up animate-delay-300 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link
