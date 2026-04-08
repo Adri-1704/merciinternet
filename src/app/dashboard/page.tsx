@@ -241,6 +241,7 @@ export default function Dashboard() {
   const [newBillToPayAmount, setNewBillToPayAmount] = useState("");
   const [newBillToPayDate, setNewBillToPayDate] = useState(todayStr());
   const [newBillToPayCategory, setNewBillToPayCategory] = useState("autre");
+  const [showExportModal, setShowExportModal] = useState(false);
   const isIndépendant = budget.mode === 'independant';
 
   // Load data
@@ -637,6 +638,181 @@ export default function Dashboard() {
     });
   }
 
+  // ─── Export functions ────────────────────────────────────────────────────────
+
+  const monthLabel = `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+  function exportCSV() {
+    const lines: string[] = [];
+    lines.push("Type,Date,Catégorie,Description,Montant CHF");
+
+    // Dépenses
+    for (const exp of budget.expenses) {
+      const cat = getCategoryInfo(exp.category);
+      lines.push(`Dépense,${exp.date},${cat.name},"${exp.description.replace(/"/g, '""')}",${exp.amount.toFixed(2)}`);
+    }
+
+    // Factures clients (indépendant)
+    for (const inv of budget.invoices) {
+      lines.push(`Facture client,${inv.date},,${inv.clientName.replace(/"/g, '""')},${inv.amount.toFixed(2)}`);
+    }
+
+    // Factures payées
+    for (const bill of budget.paidBills) {
+      const cat = getCategoryInfo(bill.category);
+      lines.push(`Facture payée,${bill.date},${cat.name},"${bill.name.replace(/"/g, '""')}",${bill.amount.toFixed(2)}`);
+    }
+
+    // Factures à payer
+    for (const bill of budget.billsToPay) {
+      const cat = bill.category ? getCategoryInfo(bill.category) : { name: "Autre" };
+      lines.push(`À payer${bill.paid ? " (payée)" : ""},${bill.dueDate},${cat.name},"${bill.name.replace(/"/g, '""')}",${bill.amount.toFixed(2)}`);
+    }
+
+    const csv = "\uFEFF" + lines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `merciinternet_${monthKey}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setShowExportModal(false);
+  }
+
+  function exportPDF() {
+    const totalExpenses = budget.expenses.reduce((s, e) => s + e.amount, 0);
+    const totalIncome = isIndépendant
+      ? budget.invoices.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
+      : budget.incomes.length > 0
+        ? budget.incomes.reduce((s, p) => s + p.amount, 0)
+        : budget.income;
+
+    // Grouper dépenses par catégorie
+    const expByCategory: Record<string, number> = {};
+    for (const exp of budget.expenses) {
+      const cat = getCategoryInfo(exp.category);
+      expByCategory[cat.name] = (expByCategory[cat.name] || 0) + exp.amount;
+    }
+
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Merciinternet — ${monthLabel}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; }
+    h1 { color: #7C3AED; font-size: 24px; margin-bottom: 4px; }
+    h2 { color: #555; font-size: 18px; margin-top: 30px; border-bottom: 2px solid #7C3AED; padding-bottom: 6px; }
+    .subtitle { color: #888; font-size: 14px; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th { background: #f4f4f5; text-align: left; padding: 8px 10px; font-weight: 600; }
+    td { padding: 8px 10px; border-bottom: 1px solid #e4e4e7; }
+    .amount { text-align: right; font-weight: 600; }
+    .total-row { background: #f9fafb; font-weight: 700; }
+    .summary { display: flex; gap: 20px; margin-top: 20px; }
+    .summary-card { flex: 1; padding: 16px; border-radius: 12px; text-align: center; }
+    .summary-card.income { background: #ecfdf5; color: #059669; }
+    .summary-card.expense { background: #fef2f2; color: #dc2626; }
+    .summary-card.balance { background: #f5f3ff; color: #7c3aed; }
+    .summary-card .label { font-size: 12px; margin-bottom: 4px; }
+    .summary-card .value { font-size: 22px; font-weight: 700; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <h1>Merciinternet</h1>
+  <p class="subtitle">Rapport financier — ${monthLabel}</p>
+
+  <div class="summary">
+    <div class="summary-card income"><div class="label">Revenus</div><div class="value">${formatCHF(totalIncome)} CHF</div></div>
+    <div class="summary-card expense"><div class="label">Dépenses</div><div class="value">${formatCHF(totalExpenses)} CHF</div></div>
+    <div class="summary-card balance"><div class="label">Solde</div><div class="value">${formatCHF(totalIncome - totalExpenses)} CHF</div></div>
+  </div>
+
+  ${budget.expenses.length > 0 ? `
+  <h2>Dépenses</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Catégorie</th><th>Description</th><th class="amount">Montant</th></tr></thead>
+    <tbody>
+      ${budget.expenses.sort((a, b) => a.date.localeCompare(b.date)).map(exp => {
+        const cat = getCategoryInfo(exp.category);
+        return `<tr><td>${exp.date}</td><td>${cat.icon} ${cat.name}</td><td>${exp.description}</td><td class="amount">${formatCHF(exp.amount)} CHF</td></tr>`;
+      }).join("")}
+      <tr class="total-row"><td colspan="3">Total dépenses</td><td class="amount">${formatCHF(totalExpenses)} CHF</td></tr>
+    </tbody>
+  </table>` : ""}
+
+  ${Object.keys(expByCategory).length > 0 ? `
+  <h2>Résumé par catégorie</h2>
+  <table>
+    <thead><tr><th>Catégorie</th><th class="amount">Montant</th></tr></thead>
+    <tbody>
+      ${Object.entries(expByCategory).sort((a, b) => b[1] - a[1]).map(([name, amount]) =>
+        `<tr><td>${name}</td><td class="amount">${formatCHF(amount)} CHF</td></tr>`
+      ).join("")}
+    </tbody>
+  </table>` : ""}
+
+  ${budget.invoices.length > 0 ? `
+  <h2>Factures clients</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Client</th><th>Statut</th><th class="amount">Montant</th></tr></thead>
+    <tbody>
+      ${budget.invoices.map(inv =>
+        `<tr><td>${inv.date}</td><td>${inv.clientName}</td><td>${inv.paid ? "Payée" : "En attente"}</td><td class="amount">${formatCHF(inv.amount)} CHF</td></tr>`
+      ).join("")}
+    </tbody>
+  </table>` : ""}
+
+  ${budget.paidBills.length > 0 ? `
+  <h2>Factures payées</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Catégorie</th><th>Nom</th><th class="amount">Montant</th></tr></thead>
+    <tbody>
+      ${budget.paidBills.map(bill => {
+        const cat = getCategoryInfo(bill.category);
+        return `<tr><td>${bill.date}</td><td>${cat.icon} ${cat.name}</td><td>${bill.name}</td><td class="amount">${formatCHF(bill.amount)} CHF</td></tr>`;
+      }).join("")}
+    </tbody>
+  </table>` : ""}
+
+  ${budget.billsToPay.length > 0 ? `
+  <h2>Factures à payer</h2>
+  <table>
+    <thead><tr><th>Échéance</th><th>Catégorie</th><th>Nom</th><th>Statut</th><th class="amount">Montant</th></tr></thead>
+    <tbody>
+      ${budget.billsToPay.map(bill => {
+        const cat = bill.category ? getCategoryInfo(bill.category) : { icon: "📦", name: "Autre" };
+        return `<tr><td>${bill.dueDate}</td><td>${cat.icon} ${cat.name}</td><td>${bill.name}</td><td>${bill.paid ? "Payée" : "À payer"}</td><td class="amount">${formatCHF(bill.amount)} CHF</td></tr>`;
+      }).join("")}
+    </tbody>
+  </table>` : ""}
+
+  ${budget.bankAccounts.length > 0 ? `
+  <h2>Trésorerie</h2>
+  <table>
+    <thead><tr><th>Compte</th><th>Type</th><th class="amount">Solde</th></tr></thead>
+    <tbody>
+      ${budget.bankAccounts.map(a =>
+        `<tr><td>${a.name}</td><td>${a.type === "perso" ? "Personnel" : "Professionnel"}</td><td class="amount">${formatCHF(a.balance)} CHF</td></tr>`
+      ).join("")}
+    </tbody>
+  </table>` : ""}
+
+  <p style="margin-top:40px;color:#aaa;font-size:11px;text-align:center;">Généré par Merciinternet.ch — ${new Date().toLocaleDateString("fr-CH")}</p>
+</body>
+</html>`;
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      setTimeout(() => w.print(), 500);
+    }
+    setShowExportModal(false);
+  }
+
   if (!loaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50">
@@ -968,6 +1144,16 @@ export default function Dashboard() {
               </svg>
               Prévisions
             </Link>
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center gap-1.5 rounded-lg border-2 border-violet-600 px-3 py-1.5 text-xs font-semibold text-violet-600 transition-colors hover:bg-violet-50"
+              title="Exporter pour fiduciaire"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export
+            </button>
           </div>
         </div>
       </header>
@@ -1584,6 +1770,47 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setShowExportModal(false)}>
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-zinc-800 mb-1">Exporter {monthLabel}</h2>
+            <p className="text-sm text-zinc-500 mb-5">Choisissez le format d&apos;export pour votre fiduciaire</p>
+
+            <div className="space-y-3">
+              <button
+                onClick={exportCSV}
+                className="w-full flex items-center gap-4 rounded-xl border-2 border-zinc-200 p-4 text-left transition-colors hover:border-emerald-400 hover:bg-emerald-50"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 font-bold text-sm">CSV</div>
+                <div>
+                  <div className="text-sm font-semibold text-zinc-800">Export CSV</div>
+                  <div className="text-xs text-zinc-500">Compatible Excel, Google Sheets, logiciels comptables</div>
+                </div>
+              </button>
+
+              <button
+                onClick={exportPDF}
+                className="w-full flex items-center gap-4 rounded-xl border-2 border-zinc-200 p-4 text-left transition-colors hover:border-red-400 hover:bg-red-50"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 text-red-600 font-bold text-sm">PDF</div>
+                <div>
+                  <div className="text-sm font-semibold text-zinc-800">Export PDF</div>
+                  <div className="text-xs text-zinc-500">Rapport complet avec résumé, idéal pour la fiduciaire</div>
+                </div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowExportModal(false)}
+              className="mt-4 w-full rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-500 hover:bg-zinc-50"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
