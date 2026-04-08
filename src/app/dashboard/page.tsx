@@ -456,6 +456,7 @@ export default function Dashboard() {
     setInvoiceClient("");
     setInvoiceAmount("");
     setInvoiceDate(todayStr());
+    setShowInvoicePanel(false);
   }
 
   function addBankAccount(type: 'perso' | 'pro') {
