@@ -397,7 +397,7 @@ export default function Previsions() {
       </header>
 
       {/* Section Tabs */}
-      <div className="mx-auto max-w-3xl px-4 pt-3">
+      <div className="mx-auto max-w-lg sm:max-w-4xl px-4 pt-3">
         <div className="flex rounded-xl bg-white p-1 shadow-sm border border-zinc-100">
           {[
             { key: "recurring" as const, label: "Charges fixes" },
@@ -419,7 +419,7 @@ export default function Previsions() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl px-4 pt-4 space-y-4">
+      <div className="mx-auto max-w-lg sm:max-w-4xl px-4 pt-4 space-y-4">
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* SECTION A: CHARGES FIXES MENSUELLES */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
