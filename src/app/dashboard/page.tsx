@@ -55,6 +55,14 @@ interface PaidBill {
   category: string;
 }
 
+interface BillToPay {
+  id: string;
+  name: string;
+  amount: number;
+  dueDate: string;
+  paid: boolean;
+}
+
 interface BudgetData {
   income: number;
   incomes: IncomePerson[];
@@ -64,6 +72,7 @@ interface BudgetData {
   invoices: Invoice[];
   bankAccounts: BankAccount[];
   paidBills: PaidBill[];
+  billsToPay: BillToPay[];
 }
 
 // ─── Categories ──────────────────────────────────────────────────────────────
@@ -148,7 +157,7 @@ function todayStr(): string {
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 function defaultBudget(): BudgetData {
-  return { income: 0, incomes: [], savingsGoal: 0, expenses: [], mode: 'particulier', invoices: [], bankAccounts: [], paidBills: [] };
+  return { income: 0, incomes: [], savingsGoal: 0, expenses: [], mode: 'particulier', invoices: [], bankAccounts: [], paidBills: [], billsToPay: [] };
 }
 
 function loadBudget(monthKey: string): BudgetData {
@@ -164,6 +173,7 @@ function loadBudget(monthKey: string): BudgetData {
       if (!data.invoices) data.invoices = [];
       if (!data.bankAccounts) data.bankAccounts = [];
       if (!data.paidBills) data.paidBills = [];
+      if (!data.billsToPay) data.billsToPay = [];
       return data;
     }
   } catch {
@@ -225,6 +235,9 @@ export default function Dashboard() {
   const [newBillAmount, setNewBillAmount] = useState("");
   const [newBillDate, setNewBillDate] = useState(todayStr());
   const [newBillCategory, setNewBillCategory] = useState("autre");
+  const [newBillToPayName, setNewBillToPayName] = useState("");
+  const [newBillToPayAmount, setNewBillToPayAmount] = useState("");
+  const [newBillToPayDate, setNewBillToPayDate] = useState(todayStr());
   const isIndépendant = budget.mode === 'independant';
 
   // Load data
@@ -493,6 +506,35 @@ export default function Dashboard() {
 
   function deletePaidBill(id: string) {
     persist({ ...budget, paidBills: budget.paidBills.filter((b) => b.id !== id) });
+  }
+
+  function addBillToPay() {
+    const parsed = parseFloat(newBillToPayAmount);
+    if (!newBillToPayName.trim() || isNaN(parsed) || parsed <= 0) return;
+    const bill: BillToPay = {
+      id: crypto.randomUUID(),
+      name: newBillToPayName.trim(),
+      amount: Math.round(parsed * 100) / 100,
+      dueDate: newBillToPayDate,
+      paid: false,
+    };
+    persist({ ...budget, billsToPay: [...budget.billsToPay, bill] });
+    setNewBillToPayName("");
+    setNewBillToPayAmount("");
+    setNewBillToPayDate(todayStr());
+  }
+
+  function toggleBillToPay(id: string) {
+    persist({
+      ...budget,
+      billsToPay: budget.billsToPay.map((b) =>
+        b.id === id ? { ...b, paid: !b.paid } : b
+      ),
+    });
+  }
+
+  function deleteBillToPay(id: string) {
+    persist({ ...budget, billsToPay: budget.billsToPay.filter((b) => b.id !== id) });
   }
 
   function toggleInvoicePaid(id: string) {
@@ -1160,6 +1202,80 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Bills To Pay (independant mode) */}
+        {isIndépendant && (
+          <div className="mb-6">
+            <h2 className="mb-3 text-sm font-semibold text-zinc-700">
+              À payer
+              {budget.billsToPay.filter(b => !b.paid).length > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                  {budget.billsToPay.filter(b => !b.paid).length}
+                </span>
+              )}
+            </h2>
+            <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
+              {budget.billsToPay.length > 0 && (
+                <div className="space-y-2">
+                  {budget.billsToPay.sort((a, b) => a.dueDate.localeCompare(b.dueDate)).map((bill) => (
+                    <div key={bill.id} className={`rounded-lg p-2.5 ${bill.paid ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-sm font-medium ${bill.paid ? 'text-green-700 line-through' : 'text-zinc-800'}`}>{bill.name}</div>
+                          <div className="text-[11px] text-zinc-400">Échéance : {formatDate(bill.dueDate)}</div>
+                        </div>
+                        <span className={`text-sm font-semibold ${bill.paid ? 'text-green-600' : 'text-red-600'}`}>{formatCHF(bill.amount)} CHF</span>
+                        <button onClick={() => deleteBillToPay(bill.id)} className="rounded p-1 text-zinc-300 hover:bg-red-100 hover:text-red-500">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => toggleBillToPay(bill.id)}
+                        className={`mt-2 w-full rounded-lg py-1.5 text-xs font-semibold transition-colors ${bill.paid ? 'bg-green-200 text-green-800 hover:bg-green-300' : 'bg-red-200 text-red-800 hover:bg-red-300'}`}
+                      >
+                        {bill.paid ? '✅ Payée — Cliquer pour annuler' : '💳 Marquer comme payée'}
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex justify-between rounded-lg bg-red-50 p-2.5 text-sm font-bold text-red-700">
+                    <span>Reste à payer</span>
+                    <span>{formatCHF(budget.billsToPay.filter(b => !b.paid).reduce((s, b) => s + b.amount, 0))} CHF</span>
+                  </div>
+                </div>
+              )}
+              <div className="border-t border-zinc-100 pt-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={newBillToPayName}
+                    onChange={(e) => setNewBillToPayName(e.target.value)}
+                    placeholder="Nom (fournisseur, taxe...)"
+                    className="col-span-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                  />
+                  <input
+                    type="number"
+                    value={newBillToPayAmount}
+                    onChange={(e) => setNewBillToPayAmount(e.target.value)}
+                    placeholder="Montant CHF"
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={newBillToPayDate}
+                    onChange={(e) => setNewBillToPayDate(e.target.value)}
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                  />
+                </div>
+                <button
+                  onClick={addBillToPay}
+                  className="mt-2 w-full rounded-lg bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Ajouter une facture à payer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick Add Form */}
         <form onSubmit={addExpense} className="mb-6 rounded-xl bg-white p-4 shadow-sm">
