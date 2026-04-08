@@ -32,7 +32,8 @@ interface Props {
       category: string;
       description: string;
       date: string;
-    }[]
+    }[],
+    receiptImage?: string
   ) => void;
   onClose: () => void;
 }
@@ -179,7 +180,8 @@ export default function ReceiptScanner({ onExpensesAdded, onClose }: Props) {
         category: item.category,
         description: item.description,
         date: dateToUse,
-      }))
+      })),
+      preview || undefined
     );
   };
 

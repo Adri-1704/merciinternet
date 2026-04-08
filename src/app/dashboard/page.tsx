@@ -5,6 +5,7 @@ import Link from "next/link";
 import ReceiptScanner from "@/components/ReceiptScanner";
 import GamificationBar from "@/components/GamificationBar";
 import GamificationPanel from "@/components/GamificationPanel";
+import { saveReceipt, getReceipt } from "@/lib/receiptStorage";
 import {
   GamificationData,
   loadGamification,
@@ -24,6 +25,7 @@ interface Expense {
   description: string;
   date: string;
   createdAt: string;
+  receiptId?: string;
 }
 
 interface IncomePerson {
@@ -53,6 +55,7 @@ interface PaidBill {
   amount: number;
   date: string;
   category: string;
+  receiptId?: string;
 }
 
 interface BillToPay {
@@ -242,6 +245,7 @@ export default function Dashboard() {
   const [newBillToPayDate, setNewBillToPayDate] = useState(todayStr());
   const [newBillToPayCategory, setNewBillToPayCategory] = useState("autre");
   const [showExportModal, setShowExportModal] = useState(false);
+  const [receiptViewer, setReceiptViewer] = useState<string | null>(null);
   const isIndépendant = budget.mode === 'independant';
 
   // Load data
@@ -410,8 +414,14 @@ export default function Dashboard() {
   }
 
   function handleScannedExpenses(
-    expenses: { amount: number; category: string; description: string; date: string }[]
+    expenses: { amount: number; category: string; description: string; date: string }[],
+    receiptImage?: string
   ) {
+    const receiptId = receiptImage ? crypto.randomUUID() : undefined;
+    if (receiptImage && receiptId) {
+      saveReceipt(receiptId, receiptImage).catch(() => {});
+    }
+
     if (scannerTarget === 'paidBill') {
       const newBills: PaidBill[] = expenses.map((exp) => ({
         id: crypto.randomUUID(),
@@ -419,6 +429,7 @@ export default function Dashboard() {
         amount: Math.round(exp.amount * 100) / 100,
         date: exp.date,
         category: exp.category,
+        receiptId,
       }));
       persist({ ...budget, paidBills: [...budget.paidBills, ...newBills] });
       setShowScanner(false);
@@ -446,6 +457,7 @@ export default function Dashboard() {
       description: exp.description,
       date: exp.date,
       createdAt: new Date().toISOString(),
+      receiptId,
     }));
 
     const updatedBudget = {
@@ -1762,9 +1774,26 @@ export default function Dashboard() {
                           <div className="text-sm font-semibold text-zinc-900">
                             -{formatCHF(exp.amount)}
                           </div>
+                          {exp.receiptId && (
+                            <button
+                              onClick={() => {
+                                getReceipt(exp.receiptId!).then((img) => {
+                                  if (img) setReceiptViewer(img);
+                                });
+                              }}
+                              className="rounded-lg p-1.5 text-violet-400 transition-colors hover:bg-violet-50 hover:text-violet-600"
+                              aria-label="Voir le reçu"
+                              title="Voir le reçu"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                              </svg>
+                            </button>
+                          )}
                           <button
                             onClick={() => deleteExpense(exp.id)}
-                            className="ml-1 rounded-lg p-1.5 text-zinc-300 transition-colors hover:bg-violet-50 hover:text-violet-500"
+                            className="rounded-lg p-1.5 text-zinc-300 transition-colors hover:bg-violet-50 hover:text-violet-500"
                             aria-label="Supprimer"
                           >
                             <svg
@@ -1791,6 +1820,24 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      {/* Receipt Viewer */}
+      {receiptViewer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setReceiptViewer(null)}>
+          <div className="relative max-h-[90vh] max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setReceiptViewer(null)}
+              className="absolute -top-3 -right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg text-zinc-500 hover:text-zinc-800"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={receiptViewer} alt="Reçu scanné" className="max-h-[85vh] w-full rounded-2xl object-contain bg-white shadow-2xl" />
+          </div>
+        </div>
+      )}
 
       {/* Export Modal */}
       {showExportModal && (
