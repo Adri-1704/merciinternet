@@ -1108,7 +1108,7 @@ export default function Dashboard() {
                     );
                   })}
                   <div className="flex justify-between rounded-lg bg-amber-50 p-2.5 text-sm font-bold text-amber-700">
-                    <span>Total payé (hors budget)</span>
+                    <span>Total payé</span>
                     <span>{formatCHF(budget.paidBills.reduce((s, b) => s + b.amount, 0))} CHF</span>
                   </div>
                 </div>
