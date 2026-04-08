@@ -3,27 +3,30 @@
 import { useState, useRef, useCallback } from "react";
 
 const CATEGORIES = [
-  { id: "loyer", icon: "\u{1F3E0}", name: "Loyer" },
-  { id: "lamal", icon: "\u{1F3E5}", name: "Caisse maladie" },
-  { id: "3epilier", icon: "\u{1F3E6}", name: "3e pilier" },
-  { id: "impots", icon: "\u{1F4CB}", name: "Imp\u00f4ts" },
-  { id: "courses", icon: "\u{1F6D2}", name: "Courses" },
-  { id: "transport", icon: "\u{1F682}", name: "Transport" },
-  { id: "telephone", icon: "\u{1F4F1}", name: "T\u00e9l\u00e9phone" },
-  { id: "assurances", icon: "\u{1F6E1}\uFE0F", name: "Assurances" },
-  { id: "restaurants", icon: "\u{1F37D}\uFE0F", name: "Restaurants" },
-  { id: "loisirs", icon: "\u{1F389}", name: "Loisirs" },
-  { id: "vetements", icon: "\u{1F455}", name: "V\u00eatements" },
-  { id: "epargne", icon: "\u{1F4B0}", name: "\u00C9pargne" },
-  { id: "autre", icon: "\u{1F4E6}", name: "Autre" },
+  { id: "loyer", icon: "🏠", name: "Loyer" },
+  { id: "lamal", icon: "🏥", name: "Caisse maladie" },
+  { id: "3epilier", icon: "🏦", name: "3e pilier" },
+  { id: "impots", icon: "📋", name: "Impôts" },
+  { id: "courses", icon: "🛒", name: "Courses" },
+  { id: "transport", icon: "🚂", name: "Transport" },
+  { id: "telephone", icon: "📱", name: "Téléphone" },
+  { id: "assurances", icon: "🛡️", name: "Assurances" },
+  { id: "restaurants", icon: "🍽️", name: "Restaurants" },
+  { id: "loisirs", icon: "🎉", name: "Loisirs" },
+  { id: "vetements", icon: "👕", name: "Vêtements" },
+  { id: "epargne", icon: "💰", name: "Épargne" },
+  { id: "poursuites", icon: "⚖️", name: "Poursuites" },
+  { id: "arrangements", icon: "📝", name: "Arrangements" },
+  { id: "autre", icon: "📦", name: "Autre" },
+  { id: "materiel", icon: "💻", name: "Matériel" },
+  { id: "logiciel", icon: "🖥️", name: "Logiciel / Abo" },
+  { id: "comptable", icon: "📊", name: "Comptable / Fiduciaire" },
+  { id: "bureau", icon: "🏢", name: "Loyer bureau" },
+  { id: "deplacement", icon: "🚗", name: "Déplacement pro" },
+  { id: "formation", icon: "📚", name: "Formation" },
+  { id: "marketing", icon: "📣", name: "Marketing / Pub" },
+  { id: "soustraitance", icon: "🤝", name: "Sous-traitance" },
 ] as const;
-
-interface ScannedItem {
-  description: string;
-  amount: number;
-  selected: boolean;
-  category: string;
-}
 
 interface Props {
   onExpensesAdded: (
@@ -77,10 +80,14 @@ export default function ReceiptScanner({ onExpensesAdded, onClose }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<ScannedItem[]>([]);
-  const [store, setStore] = useState<string | null>(null);
-  const [scannedDate, setScannedDate] = useState<string | null>(null);
-  const [total, setTotal] = useState<number | null>(null);
+  const [scanned, setScanned] = useState(false);
+
+  // Editable fields after scan
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState("");
+  const [category, setCategory] = useState("autre");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,10 +95,7 @@ export default function ReceiptScanner({ onExpensesAdded, onClose }: Props) {
     if (!file) return;
 
     setError(null);
-    setItems([]);
-    setStore(null);
-    setScannedDate(null);
-    setTotal(null);
+    setScanned(false);
 
     // Show preview
     const previewReader = new FileReader();
@@ -117,81 +121,42 @@ export default function ReceiptScanner({ onExpensesAdded, onClose }: Props) {
         return;
       }
 
-      setStore(data.store || null);
-      setScannedDate(data.date || null);
-      setTotal(data.total || null);
-
-      if (data.items && Array.isArray(data.items) && data.items.length > 0) {
-        setItems(
-          data.items.map((item: { description: string; amount: number }) => ({
-            description: item.description || "",
-            amount: typeof item.amount === "number" ? item.amount : 0,
-            selected: true,
-            category: data.suggestedCategory || "autre",
-          }))
-        );
-      } else if (data.total) {
-        // If no items but total exists, create a single item
-        setItems([
-          {
-            description: data.store || "Achat",
-            amount: data.total,
-            selected: true,
-            category: data.suggestedCategory || "autre",
-          },
-        ]);
-      } else {
-        setError("Aucun article trouv\u00e9 sur ce ticket");
-      }
+      // Pre-fill with scanned data
+      setDescription(data.store || "Achat");
+      setAmount(data.total ? String(data.total) : "");
+      setDate(data.date || new Date().toISOString().split("T")[0]);
+      setCategory(data.suggestedCategory || "autre");
+      setScanned(true);
     } catch {
-      setError("Erreur de connexion. V\u00e9rifiez votre r\u00e9seau.");
+      setError("Erreur de connexion. Vérifiez votre réseau.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const toggleItem = (index: number) => {
-    setItems((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, selected: !item.selected } : item
-      )
-    );
-  };
-
-  const updateCategory = (index: number, category: string) => {
-    setItems((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, category } : item
-      )
-    );
-  };
-
-  const selectedItems = items.filter((item) => item.selected);
-  const selectedTotal = selectedItems.reduce((s, item) => s + item.amount, 0);
-
   const handleAdd = () => {
-    const today = new Date();
-    const fallbackDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    const dateToUse = scannedDate || fallbackDate;
+    const parsedAmount = parseFloat(amount);
+    if (!description.trim() || isNaN(parsedAmount) || parsedAmount <= 0) return;
 
     onExpensesAdded(
-      selectedItems.map((item) => ({
-        amount: Math.round(item.amount * 100) / 100,
-        category: item.category,
-        description: item.description,
-        date: dateToUse,
-      })),
+      [{
+        amount: Math.round(parsedAmount * 100) / 100,
+        category,
+        description: description.trim(),
+        date,
+      }],
       preview || undefined
     );
   };
 
   const handleRetry = () => {
     setPreview(null);
-    setItems([]);
+    setScanned(false);
     setError(null);
-    setStore(null);
-    setScannedDate(null);
-    setTotal(null);
+    setDescription("");
+    setAmount("");
+    setDate("");
+    setCategory("autre");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -230,7 +195,7 @@ export default function ReceiptScanner({ onExpensesAdded, onClose }: Props) {
         />
 
         {/* Initial state: show upload button */}
-        {!preview && !loading && items.length === 0 && (
+        {!preview && !loading && !scanned && (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-violet-100">
               <svg className="h-10 w-10 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -240,10 +205,10 @@ export default function ReceiptScanner({ onExpensesAdded, onClose }: Props) {
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-zinc-700">
-                Prenez en photo votre ticket de caisse
+                Prenez en photo votre ticket ou facture
               </p>
               <p className="mt-1 text-xs text-zinc-400">
-                ou selectionnez une image depuis votre galerie
+                Le montant, la date et la catégorie seront détectés automatiquement
               </p>
             </div>
             <button
@@ -284,121 +249,88 @@ export default function ReceiptScanner({ onExpensesAdded, onClose }: Props) {
               onClick={handleRetry}
               className="mt-2 text-sm font-semibold text-red-600 underline"
             >
-              Reessayer
+              Réessayer
             </button>
           </div>
         )}
 
-        {/* Results */}
-        {items.length > 0 && !loading && (
-          <>
-            {/* Store info */}
-            {(store || scannedDate) && (
-              <div className="mb-3 rounded-xl bg-zinc-50 p-3">
-                {store && (
-                  <p className="text-sm font-semibold text-zinc-800">{store}</p>
-                )}
-                {scannedDate && (
-                  <p className="text-xs text-zinc-500">{scannedDate}</p>
-                )}
-                {total !== null && (
-                  <p className="text-xs font-medium text-zinc-600">
-                    Total: {total.toFixed(2)} CHF
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Items list */}
-            <div className="mb-4 space-y-2">
-              {items.map((item, i) => (
-                <div
-                  key={i}
-                  className={`rounded-xl border p-3 transition-colors ${
-                    item.selected
-                      ? "border-violet-200 bg-violet-50/50"
-                      : "border-zinc-200 bg-zinc-50 opacity-50"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Checkbox */}
-                    <button
-                      onClick={() => toggleItem(i)}
-                      className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-                        item.selected
-                          ? "border-violet-600 bg-violet-600"
-                          : "border-zinc-300"
-                      }`}
-                    >
-                      {item.selected && (
-                        <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
-
-                    {/* Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-zinc-800 truncate">
-                          {item.description}
-                        </p>
-                        <p className="text-sm font-bold text-zinc-900 flex-shrink-0">
-                          {item.amount.toFixed(2)} CHF
-                        </p>
-                      </div>
-
-                      {/* Category selector */}
-                      <select
-                        value={item.category}
-                        onChange={(e) => updateCategory(i, e.target.value)}
-                        className="mt-1.5 w-full rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-600 focus:border-violet-500 focus:outline-none"
-                      >
-                        {CATEGORIES.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.icon} {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        {/* Scanned result: simple editable form */}
+        {scanned && !loading && (
+          <div className="space-y-3">
+            <div className="rounded-xl bg-emerald-50 p-3 text-center">
+              <p className="text-xs font-medium text-emerald-700">Ticket analysé avec succès</p>
             </div>
 
-            {/* Summary and actions */}
-            <div className="space-y-3">
-              {selectedItems.length > 0 && (
-                <div className="flex justify-between rounded-xl bg-violet-50 p-3 text-sm font-bold text-violet-700">
-                  <span>{selectedItems.length} article{selectedItems.length > 1 ? "s" : ""} selectionne{selectedItems.length > 1 ? "s" : ""}</span>
-                  <span>{selectedTotal.toFixed(2)} CHF</span>
-                </div>
-              )}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">Description</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
+              />
+            </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={onClose}
-                  className="flex-1 rounded-xl border border-zinc-200 py-2.5 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleAdd}
-                  disabled={selectedItems.length === 0}
-                  className="flex-1 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-700 disabled:bg-zinc-300 disabled:text-zinc-500"
-                >
-                  Ajouter {selectedItems.length > 0 ? `${selectedItems.length} depense${selectedItems.length > 1 ? "s" : ""}` : ""}
-                </button>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-500">Montant CHF</label>
+                <input
+                  type="number"
+                  step="0.05"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base font-semibold focus:border-violet-500 focus:outline-none"
+                />
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-500">Date</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
+                />
+              </div>
+            </div>
 
-              <button
-                onClick={handleRetry}
-                className="w-full text-center text-xs text-zinc-400 underline"
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">Catégorie</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
               >
-                Scanner un autre ticket
+                {CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={onClose}
+                className="flex-1 rounded-xl border border-zinc-200 py-2.5 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAdd}
+                disabled={!amount || parseFloat(amount) <= 0}
+                className="flex-1 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-700 disabled:bg-zinc-300 disabled:text-zinc-500"
+              >
+                Ajouter
               </button>
             </div>
-          </>
+
+            <button
+              onClick={handleRetry}
+              className="w-full text-center text-xs text-zinc-400 underline"
+            >
+              Scanner un autre ticket
+            </button>
+          </div>
         )}
       </div>
     </div>
