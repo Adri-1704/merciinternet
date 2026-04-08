@@ -220,7 +220,7 @@ export default function Dashboard() {
   const [showTreasuryPanel, setShowTreasuryPanel] = useState<'perso' | 'pro' | null>(null);
   const [newAccountName, setNewAccountName] = useState("");
   const [newAccountBalance, setNewAccountBalance] = useState("");
-  const [showPaidBills, setShowPaidBills] = useState(false);
+  const showPaidBills = true;
   const [newBillName, setNewBillName] = useState("");
   const [newBillAmount, setNewBillAmount] = useState("");
   const [newBillDate, setNewBillDate] = useState(todayStr());
@@ -1085,22 +1085,7 @@ export default function Dashboard() {
               Factures payées
               <span className="ml-1 text-xs font-normal text-zinc-400">(hors budget)</span>
             </h2>
-            <button
-              onClick={() => setShowPaidBills(!showPaidBills)}
-              className="text-xs font-medium text-violet-600 hover:text-violet-700"
-            >
-              {showPaidBills ? "Fermer" : `Gérer (${budget.paidBills.length})`}
-            </button>
           </div>
-
-          {budget.paidBills.length > 0 && !showPaidBills && (
-            <div className="rounded-xl bg-white p-3 shadow-sm">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-zinc-500">{budget.paidBills.length} facture{budget.paidBills.length > 1 ? "s" : ""} payée{budget.paidBills.length > 1 ? "s" : ""}</span>
-                <span className="font-semibold text-zinc-700">{formatCHF(budget.paidBills.reduce((s, b) => s + b.amount, 0))} CHF</span>
-              </div>
-            </div>
-          )}
 
           {showPaidBills && (
             <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
