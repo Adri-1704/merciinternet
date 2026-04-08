@@ -246,6 +246,10 @@ export default function Dashboard() {
   const [newBillToPayCategory, setNewBillToPayCategory] = useState("autre");
   const [showExportModal, setShowExportModal] = useState(false);
   const [receiptViewer, setReceiptViewer] = useState<string | null>(null);
+  const [fiduciaryEmail, setFiduciaryEmail] = useState("");
+  const [fiduciaryName, setFiduciaryName] = useState("");
+  const [showFiduciarySettings, setShowFiduciarySettings] = useState(false);
+  const [fiduciarySent, setFiduciarySent] = useState(false);
   const isIndépendant = budget.mode === 'independant';
 
   // Load data
@@ -257,6 +261,24 @@ export default function Dashboard() {
     setBudget(data);
     setLoaded(true);
   }, [monthKey]);
+
+  // Load fiduciary settings
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("mi-fiduciary");
+      if (raw) {
+        const data = JSON.parse(raw);
+        setFiduciaryEmail(data.email || "");
+        setFiduciaryName(data.name || "");
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  function saveFiduciary(email: string, name: string) {
+    setFiduciaryEmail(email);
+    setFiduciaryName(name);
+    localStorage.setItem("mi-fiduciary", JSON.stringify({ email, name }));
+  }
 
   // Load gamification data
   useEffect(() => {
@@ -822,6 +844,54 @@ export default function Dashboard() {
       w.document.close();
       setTimeout(() => w.print(), 500);
     }
+    setShowExportModal(false);
+  }
+
+  function sendToFiduciary() {
+    if (!fiduciaryEmail) {
+      setShowFiduciarySettings(true);
+      return;
+    }
+
+    // Generate CSV and download it
+    exportCSV();
+
+    // Build email summary
+    const totalExpenses = budget.expenses.reduce((s, e) => s + e.amount, 0);
+    const totalIncome = isIndépendant
+      ? budget.invoices.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
+      : budget.incomes.length > 0
+        ? budget.incomes.reduce((s, p) => s + p.amount, 0)
+        : budget.income;
+    const totalPaidBills = budget.paidBills.reduce((s, b) => s + b.amount, 0);
+    const totalBillsToPay = budget.billsToPay.filter(b => !b.paid).reduce((s, b) => s + b.amount, 0);
+
+    const subject = encodeURIComponent(`Rapport comptable ${monthLabel} — Merciinternet`);
+    const body = encodeURIComponent(
+`Bonjour${fiduciaryName ? ` ${fiduciaryName}` : ""},
+
+Veuillez trouver ci-joint le rapport comptable du mois de ${monthLabel}.
+
+Résumé :
+- Revenus : ${formatCHF(totalIncome)} CHF
+- Dépenses : ${formatCHF(totalExpenses)} CHF
+- Factures payées : ${formatCHF(totalPaidBills)} CHF
+- Reste à payer : ${formatCHF(totalBillsToPay)} CHF
+- Solde : ${formatCHF(totalIncome - totalExpenses)} CHF
+
+Le fichier CSV est en pièce jointe.
+
+Cordialement,
+Envoyé depuis Merciinternet.ch`
+    );
+
+    // Small delay so CSV download happens first
+    setTimeout(() => {
+      window.open(`mailto:${fiduciaryEmail}?subject=${subject}&body=${body}`, "_self");
+    }, 500);
+
+    setFiduciarySent(true);
+    setTimeout(() => setFiduciarySent(false), 3000);
     setShowExportModal(false);
   }
 
@@ -1847,6 +1917,26 @@ export default function Dashboard() {
             <p className="text-sm text-zinc-500 mb-5">Choisissez le format d&apos;export pour votre fiduciaire</p>
 
             <div className="space-y-3">
+              {/* Send to fiduciary */}
+              <button
+                onClick={sendToFiduciary}
+                className="w-full flex items-center gap-4 rounded-xl border-2 border-violet-300 bg-violet-50 p-4 text-left transition-colors hover:border-violet-500"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-200 text-violet-700">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-violet-800">
+                    Envoyer à {fiduciaryName || "ma fiduciaire"}
+                  </div>
+                  <div className="text-xs text-violet-600">
+                    {fiduciaryEmail ? `${fiduciaryEmail} — CSV + résumé par email` : "Configurer l'email de votre fiduciaire"}
+                  </div>
+                </div>
+              </button>
+
               <button
                 onClick={exportCSV}
                 className="w-full flex items-center gap-4 rounded-xl border-2 border-zinc-200 p-4 text-left transition-colors hover:border-emerald-400 hover:bg-emerald-50"
@@ -1870,13 +1960,79 @@ export default function Dashboard() {
               </button>
             </div>
 
+            {/* Fiduciary settings link */}
+            <button
+              onClick={() => { setShowExportModal(false); setShowFiduciarySettings(true); }}
+              className="mt-3 w-full text-center text-xs text-violet-600 underline"
+            >
+              {fiduciaryEmail ? "Modifier l'email fiduciaire" : "Configurer l'email fiduciaire"}
+            </button>
+
             <button
               onClick={() => setShowExportModal(false)}
-              className="mt-4 w-full rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-500 hover:bg-zinc-50"
+              className="mt-3 w-full rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-500 hover:bg-zinc-50"
             >
               Annuler
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Fiduciary Settings Modal */}
+      {showFiduciarySettings && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setShowFiduciarySettings(false)}>
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-zinc-800 mb-1">Ma fiduciaire</h2>
+            <p className="text-sm text-zinc-500 mb-5">Configurez les coordonnées de votre fiduciaire pour l&apos;envoi mensuel</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-500">Nom de la fiduciaire</label>
+                <input
+                  type="text"
+                  value={fiduciaryName}
+                  onChange={(e) => setFiduciaryName(e.target.value)}
+                  placeholder="Ex: Fiduciaire Dupont SA"
+                  className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-500">Email</label>
+                <input
+                  type="email"
+                  value={fiduciaryEmail}
+                  onChange={(e) => setFiduciaryEmail(e.target.value)}
+                  placeholder="comptabilite@fiduciaire.ch"
+                  className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setShowFiduciarySettings(false)}
+                className="flex-1 rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-500 hover:bg-zinc-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => {
+                  saveFiduciary(fiduciaryEmail, fiduciaryName);
+                  setShowFiduciarySettings(false);
+                }}
+                className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fiduciary sent toast */}
+      {fiduciarySent && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg">
+          CSV téléchargé — email prêt à envoyer
         </div>
       )}
     </div>
