@@ -621,23 +621,24 @@ export default function Dashboard() {
                   .slice()
                   .sort((a, b) => b.date.localeCompare(a.date))
                   .map((inv) => (
-                  <div key={inv.id} className="flex items-center gap-2 rounded-xl bg-zinc-50 p-3">
+                  <div key={inv.id} className="rounded-xl bg-zinc-50 p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-zinc-900 truncate">{inv.clientName}</div>
+                        <div className="text-xs text-zinc-400">{formatDate(inv.date)}</div>
+                      </div>
+                      <div className={`text-sm font-semibold ${inv.paid ? 'text-green-600' : 'text-orange-600'}`}>
+                        {formatCHF(inv.amount)} CHF
+                      </div>
+                      <button onClick={() => deleteInvoice(inv.id)} className="rounded-lg p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
                     <button
                       onClick={() => toggleInvoicePaid(inv.id)}
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg ${inv.paid ? 'bg-green-100' : 'bg-orange-100'}`}
-                      title={inv.paid ? 'Encaissée' : 'En attente'}
+                      className={`mt-2 w-full rounded-lg py-1.5 text-xs font-semibold transition-colors ${inv.paid ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
                     >
-                      {inv.paid ? '✅' : '⏳'}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-zinc-900 truncate">{inv.clientName}</div>
-                      <div className="text-xs text-zinc-400">{formatDate(inv.date)}</div>
-                    </div>
-                    <div className={`text-sm font-semibold ${inv.paid ? 'text-green-600' : 'text-orange-600'}`}>
-                      {formatCHF(inv.amount)} CHF
-                    </div>
-                    <button onClick={() => deleteInvoice(inv.id)} className="rounded-lg p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      {inv.paid ? '✅ Encaissée — Cliquer pour mettre en attente' : '⏳ En attente — Cliquer pour marquer encaissée'}
                     </button>
                   </div>
                 ))}
