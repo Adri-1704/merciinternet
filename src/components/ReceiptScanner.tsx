@@ -223,7 +223,6 @@ export default function ReceiptScanner({ onExpensesAdded, onClose }: Props) {
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handleFileSelect}
           className="hidden"
         />
