@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import ReceiptScanner from "@/components/ReceiptScanner";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -14,8 +15,15 @@ interface Expense {
   createdAt: string;
 }
 
+interface IncomePerson {
+  id: string;
+  name: string;
+  amount: number;
+}
+
 interface BudgetData {
   income: number;
+  incomes: IncomePerson[];
   savingsGoal: number;
   expenses: Expense[];
 }
@@ -88,15 +96,19 @@ function todayStr(): string {
 
 function loadBudget(monthKey: string): BudgetData {
   if (typeof window === "undefined") {
-    return { income: 0, savingsGoal: 0, expenses: [] };
+    return { income: 0, incomes: [], savingsGoal: 0, expenses: [] };
   }
   try {
     const raw = localStorage.getItem(`mi-budget-${monthKey}`);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (!data.incomes) data.incomes = [];
+      return data;
+    }
   } catch {
     /* ignore */
   }
-  return { income: 0, savingsGoal: 0, expenses: [] };
+  return { income: 0, incomes: [], savingsGoal: 0, expenses: [] };
 }
 
 function saveBudget(monthKey: string, data: BudgetData) {
@@ -112,6 +124,7 @@ export default function Dashboard() {
 
   const [budget, setBudget] = useState<BudgetData>({
     income: 0,
+    incomes: [],
     savingsGoal: 0,
     expenses: [],
   });
@@ -122,10 +135,12 @@ export default function Dashboard() {
   const [category, setCategory] = useState("courses");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(todayStr());
-  const [editingIncome, setEditingIncome] = useState(false);
   const [editingSavings, setEditingSavings] = useState(false);
-  const [incomeInput, setIncomeInput] = useState("");
   const [savingsInput, setSavingsInput] = useState("");
+  const [showIncomePanel, setShowIncomePanel] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [newPersonName, setNewPersonName] = useState("");
+  const [newPersonAmount, setNewPersonAmount] = useState("");
 
   // Load data
   useEffect(() => {
@@ -144,8 +159,11 @@ export default function Dashboard() {
   );
 
   // Computed
+  const totalIncome = budget.incomes.length > 0
+    ? budget.incomes.reduce((s, p) => s + p.amount, 0)
+    : budget.income;
   const totalExpenses = budget.expenses.reduce((s, e) => s + e.amount, 0);
-  const remaining = budget.income - totalExpenses;
+  const remaining = totalIncome - totalExpenses;
   const savingsProgress =
     budget.savingsGoal > 0
       ? Math.min(100, Math.round((Math.max(0, remaining) / budget.savingsGoal) * 100))
@@ -203,11 +221,32 @@ export default function Dashboard() {
     });
   }
 
-  function saveIncome() {
-    const parsed = parseFloat(incomeInput);
+  function addIncomePerson() {
+    const parsed = parseFloat(newPersonAmount);
+    if (!newPersonName.trim() || isNaN(parsed) || parsed <= 0) return;
+    const person: IncomePerson = {
+      id: crypto.randomUUID(),
+      name: newPersonName.trim(),
+      amount: Math.round(parsed * 100) / 100,
+    };
+    persist({ ...budget, incomes: [...budget.incomes, person], income: 0 });
+    setNewPersonName("");
+    setNewPersonAmount("");
+  }
+
+  function removeIncomePerson(id: string) {
+    persist({ ...budget, incomes: budget.incomes.filter((p) => p.id !== id) });
+  }
+
+  function updateIncomeAmount(id: string, value: string) {
+    const parsed = parseFloat(value);
     if (isNaN(parsed)) return;
-    persist({ ...budget, income: Math.round(parsed * 100) / 100 });
-    setEditingIncome(false);
+    persist({
+      ...budget,
+      incomes: budget.incomes.map((p) =>
+        p.id === id ? { ...p, amount: Math.round(parsed * 100) / 100 } : p
+      ),
+    });
   }
 
   function saveSavingsGoal() {
@@ -215,6 +254,26 @@ export default function Dashboard() {
     if (isNaN(parsed)) return;
     persist({ ...budget, savingsGoal: Math.round(parsed * 100) / 100 });
     setEditingSavings(false);
+  }
+
+  function handleScannedExpenses(
+    expenses: { amount: number; category: string; description: string; date: string }[]
+  ) {
+    const newExpenses: Expense[] = expenses.map((exp) => ({
+      id: crypto.randomUUID(),
+      amount: Math.round(exp.amount * 100) / 100,
+      category: exp.category,
+      description: exp.description,
+      date: exp.date,
+      createdAt: new Date().toISOString(),
+    }));
+
+    persist({
+      ...budget,
+      expenses: [...budget.expenses, ...newExpenses],
+    });
+
+    setShowScanner(false);
   }
 
   if (!loaded) {
@@ -227,6 +286,84 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
+      {/* Income Panel */}
+      {showIncomePanel && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setShowIncomePanel(false)}>
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold">Revenus du mois</h3>
+              <button onClick={() => setShowIncomePanel(false)} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Liste des personnes */}
+            {budget.incomes.length > 0 && (
+              <div className="mb-4 space-y-2">
+                {budget.incomes.map((person) => (
+                  <div key={person.id} className="flex items-center gap-2 rounded-xl bg-zinc-50 p-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-600">
+                      {person.name[0].toUpperCase()}
+                    </div>
+                    <span className="flex-1 text-sm font-medium">{person.name}</span>
+                    <input
+                      type="number"
+                      defaultValue={person.amount}
+                      onBlur={(e) => updateIncomeAmount(person.id, e.target.value)}
+                      className="w-24 rounded-lg border border-zinc-200 px-2 py-1 text-right text-sm font-semibold focus:border-violet-500 focus:outline-none"
+                    />
+                    <span className="text-xs text-zinc-400">CHF</span>
+                    <button onClick={() => removeIncomePerson(person.id)} className="rounded-lg p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                ))}
+                <div className="flex justify-between rounded-xl bg-green-50 p-3 text-sm font-bold text-green-700">
+                  <span>Total</span>
+                  <span>{formatCHF(totalIncome)} CHF</span>
+                </div>
+              </div>
+            )}
+
+            {/* Ajouter une personne */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newPersonName}
+                onChange={(e) => setNewPersonName(e.target.value)}
+                placeholder="Prénom"
+                className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+              />
+              <input
+                type="number"
+                value={newPersonAmount}
+                onChange={(e) => setNewPersonAmount(e.target.value)}
+                placeholder="Revenu"
+                onKeyDown={(e) => e.key === "Enter" && addIncomePerson()}
+                className="w-28 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+              />
+              <button
+                onClick={addIncomePerson}
+                className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
+              >
+                +
+              </button>
+            </div>
+            <p className="mt-2 text-center text-xs text-zinc-400">
+              Ajoutez chaque personne du foyer et son revenu mensuel
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Scanner */}
+      {showScanner && (
+        <ReceiptScanner
+          onExpensesAdded={handleScannedExpenses}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
@@ -265,29 +402,26 @@ export default function Dashboard() {
           {/* Income */}
           <div
             className="dashboard-card cursor-pointer rounded-xl bg-white p-4"
-            onClick={() => {
-              setIncomeInput(String(budget.income || ""));
-              setEditingIncome(true);
-            }}
+            onClick={() => setShowIncomePanel(true)}
           >
-            <div className="mb-1 text-xs font-medium text-zinc-500">Revenus du mois</div>
-            {editingIncome ? (
-              <div className="flex gap-1">
-                <input
-                  type="number"
-                  value={incomeInput}
-                  onChange={(e) => setIncomeInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && saveIncome()}
-                  onBlur={saveIncome}
-                  autoFocus
-                  className="w-full rounded border border-zinc-300 px-2 py-1 text-lg font-bold focus:border-violet-600 focus:outline-none"
-                  placeholder="0.00"
-                />
-              </div>
-            ) : (
-              <div className="text-xl font-bold text-green-600">
-                {formatCHF(budget.income)}
-                <span className="ml-1 text-xs font-normal text-zinc-400">CHF</span>
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-xs font-medium text-zinc-500">Revenus du mois</span>
+              {budget.incomes.length > 0 && (
+                <span className="text-[10px] text-zinc-400">{budget.incomes.length} personne{budget.incomes.length > 1 ? "s" : ""}</span>
+              )}
+            </div>
+            <div className="text-xl font-bold text-green-600">
+              {formatCHF(totalIncome)}
+              <span className="ml-1 text-xs font-normal text-zinc-400">CHF</span>
+            </div>
+            {budget.incomes.length > 0 && (
+              <div className="mt-2 space-y-0.5">
+                {budget.incomes.map((p) => (
+                  <div key={p.id} className="flex justify-between text-[11px] text-zinc-400">
+                    <span>{p.name}</span>
+                    <span>{formatCHF(p.amount)}</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -409,12 +543,25 @@ export default function Dashboard() {
               />
             </div>
           </div>
-          <button
-            type="submit"
-            className="mt-4 w-full rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-700 active:bg-violet-800"
-          >
-            Ajouter
-          </button>
+          <div className="mt-4 flex gap-3">
+            <button
+              type="submit"
+              className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-700 active:bg-violet-800"
+            >
+              Ajouter
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              className="flex items-center gap-2 rounded-lg border-2 border-violet-600 px-4 py-2.5 text-sm font-semibold text-violet-600 transition-colors hover:bg-violet-50 active:bg-violet-100"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+              </svg>
+              Scanner
+            </button>
+          </div>
         </form>
 
         {/* Expense List */}
