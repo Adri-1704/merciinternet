@@ -42,6 +42,12 @@ export interface BudgetData {
     date: string;
     paid: boolean;
   }[];
+  bankAccounts: {
+    id: string;
+    name: string;
+    balance: number;
+    type: 'perso' | 'pro';
+  }[];
 }
 
 // ─── Badge definitions ──────────────────────────────────────────────────────

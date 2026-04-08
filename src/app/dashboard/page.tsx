@@ -40,6 +40,13 @@ interface Invoice {
   paid: boolean;
 }
 
+interface BankAccount {
+  id: string;
+  name: string;
+  balance: number;
+  type: 'perso' | 'pro';
+}
+
 interface BudgetData {
   income: number;
   incomes: IncomePerson[];
@@ -47,6 +54,7 @@ interface BudgetData {
   expenses: Expense[];
   mode: 'particulier' | 'independant';
   invoices: Invoice[];
+  bankAccounts: BankAccount[];
 }
 
 // ─── Categories ──────────────────────────────────────────────────────────────
@@ -131,7 +139,7 @@ function todayStr(): string {
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 function defaultBudget(): BudgetData {
-  return { income: 0, incomes: [], savingsGoal: 0, expenses: [], mode: 'particulier', invoices: [] };
+  return { income: 0, incomes: [], savingsGoal: 0, expenses: [], mode: 'particulier', invoices: [], bankAccounts: [] };
 }
 
 function loadBudget(monthKey: string): BudgetData {
@@ -145,6 +153,7 @@ function loadBudget(monthKey: string): BudgetData {
       if (!data.incomes) data.incomes = [];
       if (!data.mode) data.mode = 'particulier';
       if (!data.invoices) data.invoices = [];
+      if (!data.bankAccounts) data.bankAccounts = [];
       return data;
     }
   } catch {
@@ -198,7 +207,9 @@ export default function Dashboard() {
   const [invoiceClient, setInvoiceClient] = useState("");
   const [invoiceAmount, setInvoiceAmount] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(todayStr());
-
+  const [showTreasuryPanel, setShowTreasuryPanel] = useState<'perso' | 'pro' | null>(null);
+  const [newAccountName, setNewAccountName] = useState("");
+  const [newAccountBalance, setNewAccountBalance] = useState("");
   const isIndependant = budget.mode === 'independant';
 
   // Load data
@@ -258,6 +269,27 @@ export default function Dashboard() {
     }, {});
 
   const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  // Treasury computed values
+  const PRO_CATEGORY_IDS: string[] = PRO_CATEGORIES.map((c) => c.id);
+  const persoAccounts = budget.bankAccounts.filter((a) => a.type === 'perso');
+  const proAccounts = budget.bankAccounts.filter((a) => a.type === 'pro');
+  const totalPersoBalance = persoAccounts.reduce((s, a) => s + a.balance, 0);
+  const totalProBalance = proAccounts.reduce((s, a) => s + a.balance, 0);
+
+  const persoExpenses = budget.expenses.filter((e) => !PRO_CATEGORY_IDS.includes(e.category));
+  const proExpenses = budget.expenses.filter((e) => PRO_CATEGORY_IDS.includes(e.category));
+  const totalPersoExpenses = persoExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalProExpenses = proExpenses.reduce((s, e) => s + e.amount, 0);
+
+  const persoIncome = budget.incomes.reduce((s, p) => s + p.amount, 0) || budget.income;
+  const proIncome = totalPaidInvoices;
+
+  const persoFlux = persoIncome - totalPersoExpenses;
+  const proFlux = proIncome - totalProExpenses;
+
+  const persoProjection = totalPersoBalance + persoFlux;
+  const proProjection = totalProBalance + proFlux;
 
   // Handlers
   function prevMonth() {
@@ -396,6 +428,35 @@ export default function Dashboard() {
     setInvoiceClient("");
     setInvoiceAmount("");
     setInvoiceDate(todayStr());
+  }
+
+  function addBankAccount(type: 'perso' | 'pro') {
+    const parsed = parseFloat(newAccountBalance);
+    if (!newAccountName.trim() || isNaN(parsed)) return;
+    const account: BankAccount = {
+      id: crypto.randomUUID(),
+      name: newAccountName.trim(),
+      balance: Math.round(parsed * 100) / 100,
+      type,
+    };
+    persist({ ...budget, bankAccounts: [...budget.bankAccounts, account] });
+    setNewAccountName("");
+    setNewAccountBalance("");
+  }
+
+  function deleteBankAccount(id: string) {
+    persist({ ...budget, bankAccounts: budget.bankAccounts.filter((a) => a.id !== id) });
+  }
+
+  function updateAccountBalance(id: string, value: string) {
+    const parsed = parseFloat(value);
+    if (isNaN(parsed)) return;
+    persist({
+      ...budget,
+      bankAccounts: budget.bankAccounts.map((a) =>
+        a.id === id ? { ...a, balance: Math.round(parsed * 100) / 100 } : a
+      ),
+    });
   }
 
   function toggleInvoicePaid(id: string) {
@@ -583,6 +644,116 @@ export default function Dashboard() {
             <p className="mt-2 text-center text-xs text-zinc-400">
               Cliquez sur le statut pour basculer entre encaissee et en attente
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Treasury Panel */}
+      {showTreasuryPanel && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setShowTreasuryPanel(null)}>
+          <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold">
+                {showTreasuryPanel === 'perso' ? 'Tresorerie personnelle' : 'Tresorerie professionnelle'}
+              </h3>
+              <button onClick={() => setShowTreasuryPanel(null)} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Section 1: Mes comptes */}
+            <div className="mb-5">
+              <h4 className="mb-2 text-sm font-semibold text-zinc-600">Mes comptes</h4>
+              {(showTreasuryPanel === 'perso' ? persoAccounts : proAccounts).length > 0 && (
+                <div className="mb-3 space-y-2">
+                  {(showTreasuryPanel === 'perso' ? persoAccounts : proAccounts).map((account) => (
+                    <div key={account.id} className="flex items-center gap-2 rounded-xl bg-zinc-50 p-3">
+                      <div className={`h-2.5 w-2.5 rounded-full ${account.type === 'perso' ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
+                      <span className="flex-1 text-sm font-medium truncate">{account.name}</span>
+                      <input
+                        type="number"
+                        defaultValue={account.balance}
+                        onBlur={(e) => updateAccountBalance(account.id, e.target.value)}
+                        className="w-28 rounded-lg border border-zinc-200 px-2 py-1 text-right text-sm font-semibold focus:border-violet-500 focus:outline-none"
+                      />
+                      <span className="text-xs text-zinc-400">CHF</span>
+                      <button onClick={() => deleteBankAccount(account.id)} className="rounded-lg p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                  <div className={`flex justify-between rounded-xl p-3 text-sm font-bold ${showTreasuryPanel === 'perso' ? 'bg-emerald-50 text-emerald-700' : 'bg-indigo-50 text-indigo-700'}`}>
+                    <span>Total comptes</span>
+                    <span>{formatCHF(showTreasuryPanel === 'perso' ? totalPersoBalance : totalProBalance)} CHF</span>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  placeholder="Nom du compte"
+                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                />
+                <input
+                  type="number"
+                  value={newAccountBalance}
+                  onChange={(e) => setNewAccountBalance(e.target.value)}
+                  placeholder="Solde"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      addBankAccount(showTreasuryPanel!);
+                    }
+                  }}
+                  className="w-28 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                />
+                <button
+                  onClick={() => addBankAccount(showTreasuryPanel!)}
+                  className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Section 2: Flux du mois */}
+            <div className="mb-5">
+              <h4 className="mb-2 text-sm font-semibold text-zinc-600">Flux du mois</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between rounded-xl bg-green-50 p-3 text-sm">
+                  <span className="text-green-700 font-medium">
+                    {showTreasuryPanel === 'perso' ? 'Revenus' : 'Factures encaissees'}
+                  </span>
+                  <span className="text-green-700 font-bold">
+                    +{formatCHF(showTreasuryPanel === 'perso' ? persoIncome : proIncome)} CHF
+                  </span>
+                </div>
+                <div className="flex justify-between rounded-xl bg-red-50 p-3 text-sm">
+                  <span className="text-red-600 font-medium">Depenses</span>
+                  <span className="text-red-600 font-bold">
+                    -{formatCHF(showTreasuryPanel === 'perso' ? totalPersoExpenses : totalProExpenses)} CHF
+                  </span>
+                </div>
+                <div className={`flex justify-between rounded-xl p-3 text-sm font-bold ${(showTreasuryPanel === 'perso' ? persoFlux : proFlux) >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                  <span>Solde du mois</span>
+                  <span>{(showTreasuryPanel === 'perso' ? persoFlux : proFlux) >= 0 ? '+' : ''}{formatCHF(showTreasuryPanel === 'perso' ? persoFlux : proFlux)} CHF</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Projection */}
+            <div>
+              <h4 className="mb-2 text-sm font-semibold text-zinc-600">Projection fin de mois</h4>
+              <div className={`rounded-xl p-4 text-center ${(showTreasuryPanel === 'perso' ? persoProjection : proProjection) >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div className={`text-2xl font-bold ${(showTreasuryPanel === 'perso' ? persoProjection : proProjection) >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                  {formatCHF(showTreasuryPanel === 'perso' ? persoProjection : proProjection)} CHF
+                </div>
+                <div className="mt-1 text-xs text-zinc-500">
+                  Solde comptes ({formatCHF(showTreasuryPanel === 'perso' ? totalPersoBalance : totalProBalance)}) + Flux du mois ({(showTreasuryPanel === 'perso' ? persoFlux : proFlux) >= 0 ? '+' : ''}{formatCHF(showTreasuryPanel === 'perso' ? persoFlux : proFlux)})
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -806,6 +977,69 @@ export default function Dashboard() {
               </>
             )}
           </div>
+        </div>
+
+        {/* Treasury Section */}
+        <div className={`mb-6 grid gap-3 ${isIndependant ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Tresorerie personnelle */}
+          <div
+            className="cursor-pointer rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 p-4 border border-emerald-100 transition-shadow hover:shadow-md"
+            onClick={() => setShowTreasuryPanel('perso')}
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="text-xs font-semibold text-emerald-700">Tresorerie perso</span>
+            </div>
+            <div className="text-lg font-bold text-zinc-900">
+              {formatCHF(totalPersoBalance)}
+              <span className="ml-1 text-xs font-normal text-zinc-400">CHF</span>
+            </div>
+            <div className="mt-2 space-y-0.5">
+              <div className="flex justify-between text-[11px]">
+                <span className="text-zinc-500">Flux du mois</span>
+                <span className={persoFlux >= 0 ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                  {persoFlux >= 0 ? '+' : ''}{formatCHF(persoFlux)}
+                </span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-zinc-500">Estimation fin mois</span>
+                <span className={`font-semibold ${persoProjection >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                  {formatCHF(persoProjection)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tresorerie professionnelle (independant only) */}
+          {isIndependant && (
+            <div
+              className="cursor-pointer rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 p-4 border border-indigo-100 transition-shadow hover:shadow-md"
+              onClick={() => setShowTreasuryPanel('pro')}
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-indigo-500" />
+                <span className="text-xs font-semibold text-indigo-700">Tresorerie pro</span>
+              </div>
+              <div className="text-lg font-bold text-zinc-900">
+                {formatCHF(totalProBalance)}
+                <span className="ml-1 text-xs font-normal text-zinc-400">CHF</span>
+              </div>
+              <div className="mt-2 space-y-0.5">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-zinc-500">Flux du mois</span>
+                  <span className={proFlux >= 0 ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                    {proFlux >= 0 ? '+' : ''}{formatCHF(proFlux)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-zinc-500">Estimation fin mois</span>
+                  <span className={`font-semibold ${proProjection >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    {formatCHF(proProjection)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Add Form */}
