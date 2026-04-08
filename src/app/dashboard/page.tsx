@@ -220,7 +220,7 @@ export default function Dashboard() {
   if (!loaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
       </div>
     );
   }
@@ -231,7 +231,7 @@ export default function Dashboard() {
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
           <Link href="/" className="text-lg font-bold">
-            Merci<span className="text-red-600">Internet</span>
+            Merci<span className="text-violet-600">Internet</span>
           </Link>
           <div className="flex items-center gap-2">
             <button
@@ -280,7 +280,7 @@ export default function Dashboard() {
                   onKeyDown={(e) => e.key === "Enter" && saveIncome()}
                   onBlur={saveIncome}
                   autoFocus
-                  className="w-full rounded border border-zinc-300 px-2 py-1 text-lg font-bold focus:border-red-600 focus:outline-none"
+                  className="w-full rounded border border-zinc-300 px-2 py-1 text-lg font-bold focus:border-violet-600 focus:outline-none"
                   placeholder="0.00"
                 />
               </div>
@@ -293,11 +293,11 @@ export default function Dashboard() {
           </div>
 
           {/* Expenses */}
-          <div className="dashboard-card rounded-xl bg-white p-4">
-            <div className="mb-1 text-xs font-medium text-zinc-500">Dépenses du mois</div>
-            <div className="text-xl font-bold text-red-600">
+          <div className="dashboard-card rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 p-4">
+            <div className="mb-1 text-xs font-medium text-violet-100">Dépenses du mois</div>
+            <div className="text-xl font-bold text-white">
               {formatCHF(totalExpenses)}
-              <span className="ml-1 text-xs font-normal text-zinc-400">CHF</span>
+              <span className="ml-1 text-xs font-normal text-violet-200">CHF</span>
             </div>
           </div>
 
@@ -331,7 +331,7 @@ export default function Dashboard() {
                   onKeyDown={(e) => e.key === "Enter" && saveSavingsGoal()}
                   onBlur={saveSavingsGoal}
                   autoFocus
-                  className="w-full rounded border border-zinc-300 px-2 py-1 text-lg font-bold focus:border-red-600 focus:outline-none"
+                  className="w-full rounded border border-zinc-300 px-2 py-1 text-lg font-bold focus:border-violet-600 focus:outline-none"
                   placeholder="0.00"
                 />
               </div>
@@ -346,9 +346,9 @@ export default function Dashboard() {
                   )}
                 </div>
                 {budget.savingsGoal > 0 && (
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-violet-100">
                     <div
-                      className="animate-progress h-full rounded-full bg-red-600"
+                      className="animate-progress h-full rounded-full bg-violet-600"
                       style={{ width: `${savingsProgress}%` }}
                     />
                   </div>
@@ -372,7 +372,7 @@ export default function Dashboard() {
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
                 required
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base font-semibold focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600"
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base font-semibold focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600"
               />
             </div>
             <div>
@@ -380,7 +380,7 @@ export default function Dashboard() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600"
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -396,7 +396,7 @@ export default function Dashboard() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Optionnel"
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600"
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600"
               />
             </div>
             <div>
@@ -405,13 +405,13 @@ export default function Dashboard() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600"
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600"
               />
             </div>
           </div>
           <button
             type="submit"
-            className="mt-4 w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 active:bg-red-800"
+            className="mt-4 w-full rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-700 active:bg-violet-800"
           >
             Ajouter
           </button>
@@ -457,7 +457,7 @@ export default function Dashboard() {
                           </div>
                           <button
                             onClick={() => deleteExpense(exp.id)}
-                            className="ml-1 rounded-lg p-1.5 text-zinc-300 transition-colors hover:bg-red-50 hover:text-red-500"
+                            className="ml-1 rounded-lg p-1.5 text-zinc-300 transition-colors hover:bg-violet-50 hover:text-violet-500"
                             aria-label="Supprimer"
                           >
                             <svg

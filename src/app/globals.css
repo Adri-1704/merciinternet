@@ -2,16 +2,23 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
-  --swiss-red: #DC2626;
-  --swiss-red-dark: #B91C1C;
+  --foreground: #1E1B4B;
+  --primary: #7C3AED;
+  --primary-light: #8B5CF6;
+  --primary-dark: #6D28D9;
+  --secondary: #A78BFA;
+  --bg-section: #F5F3FF;
+  --text-heading: #1E1B4B;
+  --text-body: #4B5563;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-swiss-red: var(--swiss-red);
-  --color-swiss-red-dark: var(--swiss-red-dark);
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-secondary: var(--secondary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -22,12 +29,12 @@ body {
   font-family: var(--font-sans, Arial, Helvetica, sans-serif);
 }
 
-/* Landing page dark theme */
-.landing-dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  background: #0a0a0a;
-  color: #ededed;
+/* Landing page light/violet theme */
+.landing-violet {
+  --background: #ffffff;
+  --foreground: #1E1B4B;
+  background: #ffffff;
+  color: #1E1B4B;
 }
 
 /* Smooth scroll */
@@ -100,11 +107,16 @@ details[open] summary .faq-chevron {
   animation: progressFill 1s ease-out forwards;
 }
 
-/* Glassmorphism cards */
-.glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Light cards for landing */
+.light-card {
+  background: #ffffff;
+  border: 1px solid #EDE9FE;
+  box-shadow: 0 1px 3px rgba(124, 58, 237, 0.06);
+}
+
+.light-card:hover {
+  border-color: #C4B5FD;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
 }
 
 /* Dashboard card shadows */
@@ -115,4 +127,12 @@ details[open] summary .faq-chevron {
 
 .dashboard-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* Gradient text helper */
+.gradient-text-violet {
+  background: linear-gradient(135deg, #7C3AED, #4F46E5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
