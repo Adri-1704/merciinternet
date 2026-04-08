@@ -218,6 +218,7 @@ export default function Dashboard() {
   const [savingsInput, setSavingsInput] = useState("");
   const [showIncomePanel, setShowIncomePanel] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [scannerTarget, setScannerTarget] = useState<'expense' | 'paidBill' | 'billToPay'>('expense');
   const [newPersonName, setNewPersonName] = useState("");
   const [newPersonAmount, setNewPersonAmount] = useState("");
   const [gamData, setGamData] = useState<GamificationData | null>(null);
@@ -408,6 +409,33 @@ export default function Dashboard() {
   function handleScannedExpenses(
     expenses: { amount: number; category: string; description: string; date: string }[]
   ) {
+    if (scannerTarget === 'paidBill') {
+      const newBills: PaidBill[] = expenses.map((exp) => ({
+        id: crypto.randomUUID(),
+        name: exp.description || 'Facture scannée',
+        amount: Math.round(exp.amount * 100) / 100,
+        date: exp.date,
+        category: exp.category,
+      }));
+      persist({ ...budget, paidBills: [...budget.paidBills, ...newBills] });
+      setShowScanner(false);
+      return;
+    }
+
+    if (scannerTarget === 'billToPay') {
+      const newBills: BillToPay[] = expenses.map((exp) => ({
+        id: crypto.randomUUID(),
+        name: exp.description || 'Facture scannée',
+        amount: Math.round(exp.amount * 100) / 100,
+        dueDate: exp.date,
+        paid: false,
+      }));
+      persist({ ...budget, billsToPay: [...budget.billsToPay, ...newBills] });
+      setShowScanner(false);
+      return;
+    }
+
+    // Default: expense
     const newExpenses: Expense[] = expenses.map((exp) => ({
       id: crypto.randomUUID(),
       amount: Math.round(exp.amount * 100) / 100,
@@ -434,6 +462,11 @@ export default function Dashboard() {
     }
 
     setShowScanner(false);
+  }
+
+  function openScanner(target: 'expense' | 'paidBill' | 'billToPay') {
+    setScannerTarget(target);
+    setShowScanner(true);
   }
 
   function toggleMode() {
@@ -1245,6 +1278,13 @@ export default function Dashboard() {
                 <p className="mt-2 text-center text-[11px] text-zinc-400">
                   Ces factures sont suivies mais ne sont pas déduites de votre budget
                 </p>
+                <button
+                  onClick={() => openScanner('paidBill')}
+                  className="mt-2 w-full flex items-center justify-center gap-2 rounded-lg border-2 border-violet-600 py-2 text-sm font-semibold text-violet-600 hover:bg-violet-50"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
+                  Scanner une facture
+                </button>
               </div>
             </div>
           )}
@@ -1357,6 +1397,13 @@ export default function Dashboard() {
                 >
                   Ajouter une facture à payer
                 </button>
+                <button
+                  onClick={() => openScanner('billToPay')}
+                  className="mt-2 w-full flex items-center justify-center gap-2 rounded-lg border-2 border-red-600 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
+                  Scanner une facture
+                </button>
               </div>
             </div>
           </div>
@@ -1432,7 +1479,7 @@ export default function Dashboard() {
             </button>
             <button
               type="button"
-              onClick={() => setShowScanner(true)}
+              onClick={() => openScanner('expense')}
               className="flex items-center gap-2 rounded-lg border-2 border-violet-600 px-4 py-2.5 text-sm font-semibold text-violet-600 transition-colors hover:bg-violet-50 active:bg-violet-100"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
