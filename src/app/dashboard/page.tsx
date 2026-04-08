@@ -47,6 +47,14 @@ interface BankAccount {
   type: 'perso' | 'pro';
 }
 
+interface PaidBill {
+  id: string;
+  name: string;
+  amount: number;
+  date: string;
+  category: string;
+}
+
 interface BudgetData {
   income: number;
   incomes: IncomePerson[];
@@ -55,6 +63,7 @@ interface BudgetData {
   mode: 'particulier' | 'independant';
   invoices: Invoice[];
   bankAccounts: BankAccount[];
+  paidBills: PaidBill[];
 }
 
 // ─── Categories ──────────────────────────────────────────────────────────────
@@ -139,7 +148,7 @@ function todayStr(): string {
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 function defaultBudget(): BudgetData {
-  return { income: 0, incomes: [], savingsGoal: 0, expenses: [], mode: 'particulier', invoices: [], bankAccounts: [] };
+  return { income: 0, incomes: [], savingsGoal: 0, expenses: [], mode: 'particulier', invoices: [], bankAccounts: [], paidBills: [] };
 }
 
 function loadBudget(monthKey: string): BudgetData {
@@ -154,6 +163,7 @@ function loadBudget(monthKey: string): BudgetData {
       if (!data.mode) data.mode = 'particulier';
       if (!data.invoices) data.invoices = [];
       if (!data.bankAccounts) data.bankAccounts = [];
+      if (!data.paidBills) data.paidBills = [];
       return data;
     }
   } catch {
@@ -210,6 +220,11 @@ export default function Dashboard() {
   const [showTreasuryPanel, setShowTreasuryPanel] = useState<'perso' | 'pro' | null>(null);
   const [newAccountName, setNewAccountName] = useState("");
   const [newAccountBalance, setNewAccountBalance] = useState("");
+  const [showPaidBills, setShowPaidBills] = useState(false);
+  const [newBillName, setNewBillName] = useState("");
+  const [newBillAmount, setNewBillAmount] = useState("");
+  const [newBillDate, setNewBillDate] = useState(todayStr());
+  const [newBillCategory, setNewBillCategory] = useState("autre");
   const isIndependant = budget.mode === 'independant';
 
   // Load data
@@ -457,6 +472,27 @@ export default function Dashboard() {
         a.id === id ? { ...a, balance: Math.round(parsed * 100) / 100 } : a
       ),
     });
+  }
+
+  function addPaidBill() {
+    const parsed = parseFloat(newBillAmount);
+    if (!newBillName.trim() || isNaN(parsed) || parsed <= 0) return;
+    const bill: PaidBill = {
+      id: crypto.randomUUID(),
+      name: newBillName.trim(),
+      amount: Math.round(parsed * 100) / 100,
+      date: newBillDate,
+      category: newBillCategory,
+    };
+    persist({ ...budget, paidBills: [...budget.paidBills, bill] });
+    setNewBillName("");
+    setNewBillAmount("");
+    setNewBillDate(todayStr());
+    setNewBillCategory("autre");
+  }
+
+  function deletePaidBill(id: string) {
+    persist({ ...budget, paidBills: budget.paidBills.filter((b) => b.id !== id) });
   }
 
   function toggleInvoicePaid(id: string) {
@@ -1037,6 +1073,103 @@ export default function Dashboard() {
                     {formatCHF(proProjection)}
                   </span>
                 </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Paid Bills Section */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-zinc-700">
+              Factures payées
+              <span className="ml-1 text-xs font-normal text-zinc-400">(hors budget)</span>
+            </h2>
+            <button
+              onClick={() => setShowPaidBills(!showPaidBills)}
+              className="text-xs font-medium text-violet-600 hover:text-violet-700"
+            >
+              {showPaidBills ? "Fermer" : `Gérer (${budget.paidBills.length})`}
+            </button>
+          </div>
+
+          {budget.paidBills.length > 0 && !showPaidBills && (
+            <div className="rounded-xl bg-white p-3 shadow-sm">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-zinc-500">{budget.paidBills.length} facture{budget.paidBills.length > 1 ? "s" : ""} payée{budget.paidBills.length > 1 ? "s" : ""}</span>
+                <span className="font-semibold text-zinc-700">{formatCHF(budget.paidBills.reduce((s, b) => s + b.amount, 0))} CHF</span>
+              </div>
+            </div>
+          )}
+
+          {showPaidBills && (
+            <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
+              {budget.paidBills.length > 0 && (
+                <div className="space-y-2">
+                  {budget.paidBills.sort((a, b) => b.date.localeCompare(a.date)).map((bill) => {
+                    const cat = getCategoryInfo(bill.category);
+                    return (
+                      <div key={bill.id} className="flex items-center gap-2 rounded-lg bg-zinc-50 p-2.5">
+                        <span className="text-lg">{cat.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-zinc-800 truncate">{bill.name}</div>
+                          <div className="text-[11px] text-zinc-400">{formatDate(bill.date)}</div>
+                        </div>
+                        <span className="text-sm font-semibold text-zinc-700">{formatCHF(bill.amount)}</span>
+                        <button onClick={() => deletePaidBill(bill.id)} className="rounded p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <div className="flex justify-between rounded-lg bg-amber-50 p-2.5 text-sm font-bold text-amber-700">
+                    <span>Total payé (hors budget)</span>
+                    <span>{formatCHF(budget.paidBills.reduce((s, b) => s + b.amount, 0))} CHF</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t border-zinc-100 pt-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={newBillName}
+                    onChange={(e) => setNewBillName(e.target.value)}
+                    placeholder="Nom de la facture"
+                    className="col-span-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                  />
+                  <input
+                    type="number"
+                    value={newBillAmount}
+                    onChange={(e) => setNewBillAmount(e.target.value)}
+                    placeholder="Montant CHF"
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={newBillDate}
+                    onChange={(e) => setNewBillDate(e.target.value)}
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                  />
+                  <select
+                    value={newBillCategory}
+                    onChange={(e) => setNewBillCategory(e.target.value)}
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={addPaidBill}
+                    className="rounded-lg bg-violet-600 py-2 text-sm font-semibold text-white hover:bg-violet-700"
+                  >
+                    Ajouter
+                  </button>
+                </div>
+                <p className="mt-2 text-center text-[11px] text-zinc-400">
+                  Ces factures sont suivies mais ne sont pas déduites de votre budget
+                </p>
               </div>
             </div>
           )}
