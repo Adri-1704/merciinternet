@@ -454,7 +454,7 @@ export default function Previsions() {
             </div>
 
             {/* Two columns on desktop, stacked on mobile */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Revenus récurrents */}
               <div className="rounded-2xl bg-white p-4 shadow-sm border border-zinc-100">
                 <h3 className="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2">
