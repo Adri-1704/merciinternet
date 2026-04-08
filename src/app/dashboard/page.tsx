@@ -1216,7 +1216,6 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-zinc-700">
               Factures payées
-              <span className="ml-1 text-xs font-normal text-zinc-400">(hors budget)</span>
             </h2>
           </div>
 
