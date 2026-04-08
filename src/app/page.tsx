@@ -101,7 +101,7 @@ export default function Home() {
           <h1 className="animate-fade-in-up animate-delay-100 mb-6 text-5xl font-bold leading-tight tracking-tight text-indigo-950 md:text-7xl">
             Gérez votre budget
             <br />
-            <span className="gradient-text-violet">comme un Suisse</span>
+            <span className="gradient-text-violet">pour le prix d&apos;un verre de blanc</span>
           </h1>
           <p className="animate-fade-in-up animate-delay-200 mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl">
             L&apos;app de budget pensée pour la Suisse. Simple, rapide, en
