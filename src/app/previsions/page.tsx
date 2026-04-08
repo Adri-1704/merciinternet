@@ -249,18 +249,11 @@ export default function Previsions() {
     setExpCategory("loyer");
   }
 
-  // Add suggestion
+  // Pre-fill form with suggestion
   function addSuggestion(s: typeof EXPENSE_SUGGESTIONS[number]) {
-    // Check if already exists
-    if (recurring.some((r) => r.name === s.name && r.type === "expense")) return;
-    const item: RecurringItem = {
-      id: uuid(),
-      name: s.name,
-      amount: s.amount,
-      type: "expense",
-      category: s.category,
-    };
-    persistRecurring([...recurring, item]);
+    setExpName(s.name);
+    setExpCategory(s.category);
+    setExpAmount("");
   }
 
   function removeItem(id: string) {
