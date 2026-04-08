@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MerciInternet.ch — Gérez votre budget comme un Suisse",
+  title: "Merciinternet.ch — Gérez votre budget comme un Suisse",
   description:
     "L'app de gestion de budget pensée pour la Suisse. Saisie rapide des dépenses, catégories suisses (LAMal, 3e pilier, impôts, CFF...), objectifs d'épargne, vue mensuelle. En francs suisses.",
   keywords: [
@@ -30,17 +30,17 @@ export const metadata: Metadata = {
     "app budget suisse",
   ],
   openGraph: {
-    title: "MerciInternet.ch — Gérez votre budget comme un Suisse",
+    title: "Merciinternet.ch — Gérez votre budget comme un Suisse",
     description:
       "L'app de budget pensée pour la Suisse. Simple, rapide, en francs suisses.",
     url: "https://merciinternet.ch",
-    siteName: "MerciInternet.ch",
+    siteName: "Merciinternet.ch",
     locale: "fr_CH",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MerciInternet.ch — Gérez votre budget comme un Suisse",
+    title: "Merciinternet.ch — Gérez votre budget comme un Suisse",
     description:
       "L'app de budget pensée pour la Suisse. Simple, rapide, en francs suisses.",
   },

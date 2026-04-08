@@ -45,7 +45,7 @@ const categories = [
 
 const faqs = [
   {
-    q: "MerciInternet est-il vraiment gratuit ?",
+    q: "Merciinternet est-il vraiment gratuit ?",
     a: "Oui ! La version gratuite vous donne accès au budget mensuel, aux catégories suisses et à un compte. La version Premium débloque les multi-comptes, les objectifs d'épargne et l'export PDF.",
   },
   {
@@ -54,10 +54,10 @@ const faqs = [
   },
   {
     q: "Pourquoi une app de budget spécifique à la Suisse ?",
-    a: "Les apps internationales ne comprennent pas les spécificités suisses : LAMal, 3e pilier, Serafe, impôts cantonaux... MerciInternet est conçu par des Suisses, pour des Suisses.",
+    a: "Les apps internationales ne comprennent pas les spécificités suisses : LAMal, 3e pilier, Serafe, impôts cantonaux... Merciinternet est conçu par des Suisses, pour des Suisses.",
   },
   {
-    q: "Puis-je utiliser MerciInternet en euros aussi ?",
+    q: "Puis-je utiliser Merciinternet en euros aussi ?",
     a: "La version gratuite fonctionne en CHF. La version Premium permet de gérer plusieurs devises (CHF et EUR), idéal pour les frontaliers.",
   },
   {
@@ -144,7 +144,7 @@ export default function Home() {
       <section id="features" className="bg-violet-50/50 px-6 py-24">
         <div className="mx-auto max-w-6xl">
           <h2 className="mb-4 text-center text-3xl font-bold text-indigo-950 md:text-4xl">
-            Pourquoi <span className="text-violet-600">MerciInternet</span> ?
+            Pourquoi <span className="text-violet-600">Merciinternet</span> ?
           </h2>
           <p className="mx-auto mb-16 max-w-2xl text-center text-gray-600">
             Une app de budget qui comprend vraiment la vie en Suisse.
@@ -309,7 +309,7 @@ export default function Home() {
             Questions <span className="text-violet-600">fréquentes</span>
           </h2>
           <p className="mx-auto mb-16 max-w-2xl text-center text-gray-600">
-            Tout ce que vous devez savoir sur MerciInternet.
+            Tout ce que vous devez savoir sur Merciinternet.
           </p>
           <div className="space-y-3">
             {faqs.map((faq) => (
@@ -354,7 +354,7 @@ export default function Home() {
               de vos finances ?
             </h2>
             <p className="mx-auto mb-10 max-w-xl text-violet-100">
-              Rejoignez MerciInternet et commencez à gérer votre budget en francs
+              Rejoignez Merciinternet et commencez à gérer votre budget en francs
               suisses, avec des catégories qui vous parlent.
             </p>
             <Link
@@ -397,7 +397,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-8 border-t border-white/10 pt-6 text-center text-xs text-indigo-300/40">
-            &copy; {new Date().getFullYear()} MerciInternet.ch — Tous droits
+            &copy; {new Date().getFullYear()} Merciinternet.ch — Tous droits
             réservés
           </div>
         </div>
