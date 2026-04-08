@@ -34,6 +34,14 @@ export interface BudgetData {
     date: string;
     createdAt: string;
   }[];
+  mode: 'particulier' | 'independant';
+  invoices: {
+    id: string;
+    clientName: string;
+    amount: number;
+    date: string;
+    paid: boolean;
+  }[];
 }
 
 // ─── Badge definitions ──────────────────────────────────────────────────────

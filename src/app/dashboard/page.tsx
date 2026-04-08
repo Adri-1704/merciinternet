@@ -32,11 +32,21 @@ interface IncomePerson {
   amount: number;
 }
 
+interface Invoice {
+  id: string;
+  clientName: string;
+  amount: number;
+  date: string;
+  paid: boolean;
+}
+
 interface BudgetData {
   income: number;
   incomes: IncomePerson[];
   savingsGoal: number;
   expenses: Expense[];
+  mode: 'particulier' | 'independant';
+  invoices: Invoice[];
 }
 
 // ─── Categories ──────────────────────────────────────────────────────────────
@@ -57,8 +67,21 @@ const CATEGORIES = [
   { id: "autre", icon: "📦", name: "Autre" },
 ] as const;
 
+const PRO_CATEGORIES = [
+  { id: "materiel", icon: "💻", name: "Matériel" },
+  { id: "logiciel", icon: "🖥️", name: "Logiciel / Abo" },
+  { id: "comptable", icon: "📊", name: "Comptable / Fiduciaire" },
+  { id: "bureau", icon: "🏢", name: "Loyer bureau" },
+  { id: "deplacement", icon: "🚗", name: "Déplacement pro" },
+  { id: "formation", icon: "📚", name: "Formation" },
+  { id: "marketing", icon: "📣", name: "Marketing / Pub" },
+  { id: "soustraitance", icon: "🤝", name: "Sous-traitance" },
+] as const;
+
+const ALL_CATEGORIES = [...CATEGORIES, ...PRO_CATEGORIES];
+
 function getCategoryInfo(id: string) {
-  return CATEGORIES.find((c) => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
+  return ALL_CATEGORIES.find((c) => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -105,21 +128,40 @@ function todayStr(): string {
 
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
+function defaultBudget(): BudgetData {
+  return { income: 0, incomes: [], savingsGoal: 0, expenses: [], mode: 'particulier', invoices: [] };
+}
+
 function loadBudget(monthKey: string): BudgetData {
   if (typeof window === "undefined") {
-    return { income: 0, incomes: [], savingsGoal: 0, expenses: [] };
+    return defaultBudget();
   }
   try {
     const raw = localStorage.getItem(`mi-budget-${monthKey}`);
     if (raw) {
       const data = JSON.parse(raw);
       if (!data.incomes) data.incomes = [];
+      if (!data.mode) data.mode = 'particulier';
+      if (!data.invoices) data.invoices = [];
       return data;
     }
   } catch {
     /* ignore */
   }
-  return { income: 0, incomes: [], savingsGoal: 0, expenses: [] };
+  return defaultBudget();
+}
+
+// Persist mode globally so it carries across months
+function loadGlobalMode(): 'particulier' | 'independant' {
+  if (typeof window === "undefined") return 'particulier';
+  try {
+    return (localStorage.getItem('mi-mode') as 'particulier' | 'independant') || 'particulier';
+  } catch { return 'particulier'; }
+}
+
+function saveGlobalMode(mode: 'particulier' | 'independant') {
+  if (typeof window === "undefined") return;
+  localStorage.setItem('mi-mode', mode);
 }
 
 function saveBudget(monthKey: string, data: BudgetData) {
@@ -133,12 +175,7 @@ export default function Dashboard() {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const monthKey = getMonthKey(currentDate.getFullYear(), currentDate.getMonth());
 
-  const [budget, setBudget] = useState<BudgetData>({
-    income: 0,
-    incomes: [],
-    savingsGoal: 0,
-    expenses: [],
-  });
+  const [budget, setBudget] = useState<BudgetData>(defaultBudget());
   const [loaded, setLoaded] = useState(false);
 
   // Form state
@@ -155,10 +192,19 @@ export default function Dashboard() {
   const [gamData, setGamData] = useState<GamificationData | null>(null);
   const [showGamification, setShowGamification] = useState(false);
   const [newBadgeToast, setNewBadgeToast] = useState<string | null>(null);
+  const [showInvoicePanel, setShowInvoicePanel] = useState(false);
+  const [invoiceClient, setInvoiceClient] = useState("");
+  const [invoiceAmount, setInvoiceAmount] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState(todayStr());
+
+  const isIndependant = budget.mode === 'independant';
 
   // Load data
   useEffect(() => {
     const data = loadBudget(monthKey);
+    // Apply global mode preference
+    const globalMode = loadGlobalMode();
+    data.mode = globalMode;
     setBudget(data);
     setLoaded(true);
   }, [monthKey]);
@@ -183,9 +229,15 @@ export default function Dashboard() {
   );
 
   // Computed
-  const totalIncome = budget.incomes.length > 0
-    ? budget.incomes.reduce((s, p) => s + p.amount, 0)
-    : budget.income;
+  const totalInvoiced = budget.invoices.reduce((s, inv) => s + inv.amount, 0);
+  const totalPaidInvoices = budget.invoices.filter((inv) => inv.paid).reduce((s, inv) => s + inv.amount, 0);
+  const totalPendingInvoices = totalInvoiced - totalPaidInvoices;
+
+  const totalIncome = isIndependant
+    ? totalPaidInvoices
+    : budget.incomes.length > 0
+      ? budget.incomes.reduce((s, p) => s + p.amount, 0)
+      : budget.income;
   const totalExpenses = budget.expenses.reduce((s, e) => s + e.amount, 0);
   const remaining = totalIncome - totalExpenses;
   const savingsProgress =
@@ -322,6 +374,44 @@ export default function Dashboard() {
     setShowScanner(false);
   }
 
+  function toggleMode() {
+    const newMode = budget.mode === 'particulier' ? 'independant' : 'particulier';
+    saveGlobalMode(newMode);
+    persist({ ...budget, mode: newMode });
+  }
+
+  function addInvoice() {
+    const parsed = parseFloat(invoiceAmount);
+    if (!invoiceClient.trim() || isNaN(parsed) || parsed <= 0) return;
+    const inv: Invoice = {
+      id: crypto.randomUUID(),
+      clientName: invoiceClient.trim(),
+      amount: Math.round(parsed * 100) / 100,
+      date: invoiceDate,
+      paid: false,
+    };
+    persist({ ...budget, invoices: [...budget.invoices, inv] });
+    setInvoiceClient("");
+    setInvoiceAmount("");
+    setInvoiceDate(todayStr());
+  }
+
+  function toggleInvoicePaid(id: string) {
+    persist({
+      ...budget,
+      invoices: budget.invoices.map((inv) =>
+        inv.id === id ? { ...inv, paid: !inv.paid } : inv
+      ),
+    });
+  }
+
+  function deleteInvoice(id: string) {
+    persist({
+      ...budget,
+      invoices: budget.invoices.filter((inv) => inv.id !== id),
+    });
+  }
+
   if (!loaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50">
@@ -402,6 +492,99 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Invoice Panel (independant mode) */}
+      {showInvoicePanel && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setShowInvoicePanel(false)}>
+          <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold">Factures du mois</h3>
+              <button onClick={() => setShowInvoicePanel(false)} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Summary */}
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-green-50 p-3 text-center">
+                <div className="text-xs text-green-600 font-medium">Encaisse</div>
+                <div className="text-lg font-bold text-green-700">{formatCHF(totalPaidInvoices)} CHF</div>
+              </div>
+              <div className="rounded-xl bg-orange-50 p-3 text-center">
+                <div className="text-xs text-orange-600 font-medium">En attente</div>
+                <div className="text-lg font-bold text-orange-700">{formatCHF(totalPendingInvoices)} CHF</div>
+              </div>
+            </div>
+
+            {/* Invoice list */}
+            {budget.invoices.length > 0 && (
+              <div className="mb-4 space-y-2">
+                {budget.invoices
+                  .slice()
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .map((inv) => (
+                  <div key={inv.id} className="flex items-center gap-2 rounded-xl bg-zinc-50 p-3">
+                    <button
+                      onClick={() => toggleInvoicePaid(inv.id)}
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg ${inv.paid ? 'bg-green-100' : 'bg-orange-100'}`}
+                      title={inv.paid ? 'Encaissee' : 'En attente'}
+                    >
+                      {inv.paid ? '✅' : '⏳'}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-zinc-900 truncate">{inv.clientName}</div>
+                      <div className="text-xs text-zinc-400">{formatDate(inv.date)}</div>
+                    </div>
+                    <div className={`text-sm font-semibold ${inv.paid ? 'text-green-600' : 'text-orange-600'}`}>
+                      {formatCHF(inv.amount)} CHF
+                    </div>
+                    <button onClick={() => deleteInvoice(inv.id)} className="rounded-lg p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add invoice form */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={invoiceClient}
+                  onChange={(e) => setInvoiceClient(e.target.value)}
+                  placeholder="Nom du client"
+                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                />
+                <input
+                  type="number"
+                  value={invoiceAmount}
+                  onChange={(e) => setInvoiceAmount(e.target.value)}
+                  placeholder="Montant"
+                  className="w-28 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                />
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={invoiceDate}
+                  onChange={(e) => setInvoiceDate(e.target.value)}
+                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                />
+                <button
+                  onClick={addInvoice}
+                  className="rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
+                >
+                  Ajouter
+                </button>
+              </div>
+            </div>
+            <p className="mt-2 text-center text-xs text-zinc-400">
+              Cliquez sur le statut pour basculer entre encaissee et en attente
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Receipt Scanner */}
       {showScanner && (
         <ReceiptScanner
@@ -442,6 +625,26 @@ export default function Dashboard() {
         </div>
       </header>
 
+      {/* Mode Toggle */}
+      <div className="mx-auto max-w-lg px-4 pt-3 pb-1">
+        <div className="flex items-center justify-center">
+          <div className="inline-flex rounded-full bg-zinc-100 p-0.5 text-xs font-medium">
+            <button
+              onClick={() => budget.mode !== 'particulier' && toggleMode()}
+              className={`rounded-full px-3 py-1 transition-colors ${budget.mode === 'particulier' ? 'bg-violet-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
+            >
+              Particulier
+            </button>
+            <button
+              onClick={() => budget.mode !== 'independant' && toggleMode()}
+              className={`rounded-full px-3 py-1 transition-colors ${budget.mode === 'independant' ? 'bg-violet-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
+            >
+              Independant
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Gamification Bar */}
       {gamData && (
         <GamificationBar data={gamData} onOpen={() => setShowGamification(true)} />
@@ -468,36 +671,78 @@ export default function Dashboard() {
       <main className="mx-auto max-w-lg px-4 pb-8 pt-4">
         {/* Summary Cards */}
         <div className="mb-6 grid grid-cols-2 gap-3">
-          {/* Income */}
-          <div
-            className="dashboard-card cursor-pointer rounded-xl bg-white p-4"
-            onClick={() => setShowIncomePanel(true)}
-          >
-            <div className="mb-1 flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Revenus du mois</span>
+          {/* Income / Invoices card */}
+          {isIndependant ? (
+            <>
+              {/* Facture ce mois */}
+              <div
+                className="dashboard-card cursor-pointer rounded-xl bg-white p-4"
+                onClick={() => setShowInvoicePanel(true)}
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">Facture ce mois</span>
+                  {budget.invoices.length > 0 && (
+                    <span className="text-[10px] text-zinc-400">{budget.invoices.length} facture{budget.invoices.length > 1 ? "s" : ""}</span>
+                  )}
+                </div>
+                <div className="text-xl font-bold text-violet-600">
+                  {formatCHF(totalInvoiced)}
+                  <span className="ml-1 text-xs font-normal text-zinc-400">CHF</span>
+                </div>
+                {budget.invoices.length > 0 && (
+                  <div className="mt-2 space-y-0.5">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-green-600">Encaisse</span>
+                      <span className="text-green-600 font-medium">{formatCHF(totalPaidInvoices)}</span>
+                    </div>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-orange-500">En attente</span>
+                      <span className="text-orange-500 font-medium">{formatCHF(totalPendingInvoices)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Encaisse */}
+              <div className="dashboard-card rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 p-4">
+                <div className="mb-1 text-xs font-medium text-green-100">Encaisse</div>
+                <div className="text-xl font-bold text-white">
+                  {formatCHF(totalPaidInvoices)}
+                  <span className="ml-1 text-xs font-normal text-green-200">CHF</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div
+              className="dashboard-card cursor-pointer rounded-xl bg-white p-4"
+              onClick={() => setShowIncomePanel(true)}
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs font-medium text-zinc-500">Revenus du mois</span>
+                {budget.incomes.length > 0 && (
+                  <span className="text-[10px] text-zinc-400">{budget.incomes.length} personne{budget.incomes.length > 1 ? "s" : ""}</span>
+                )}
+              </div>
+              <div className="text-xl font-bold text-green-600">
+                {formatCHF(totalIncome)}
+                <span className="ml-1 text-xs font-normal text-zinc-400">CHF</span>
+              </div>
               {budget.incomes.length > 0 && (
-                <span className="text-[10px] text-zinc-400">{budget.incomes.length} personne{budget.incomes.length > 1 ? "s" : ""}</span>
+                <div className="mt-2 space-y-0.5">
+                  {budget.incomes.map((p) => (
+                    <div key={p.id} className="flex justify-between text-[11px] text-zinc-400">
+                      <span>{p.name}</span>
+                      <span>{formatCHF(p.amount)}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-            <div className="text-xl font-bold text-green-600">
-              {formatCHF(totalIncome)}
-              <span className="ml-1 text-xs font-normal text-zinc-400">CHF</span>
-            </div>
-            {budget.incomes.length > 0 && (
-              <div className="mt-2 space-y-0.5">
-                {budget.incomes.map((p) => (
-                  <div key={p.id} className="flex justify-between text-[11px] text-zinc-400">
-                    <span>{p.name}</span>
-                    <span>{formatCHF(p.amount)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Expenses */}
-          <div className="dashboard-card rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 p-4">
-            <div className="mb-1 text-xs font-medium text-violet-100">Dépenses du mois</div>
+          <div className={`dashboard-card rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 p-4 ${isIndependant ? 'col-span-1' : ''}`}>
+            <div className="mb-1 text-xs font-medium text-violet-100">Depenses du mois</div>
             <div className="text-xl font-bold text-white">
               {formatCHF(totalExpenses)}
               <span className="ml-1 text-xs font-normal text-violet-200">CHF</span>
@@ -506,7 +751,7 @@ export default function Dashboard() {
 
           {/* Remaining */}
           <div className="dashboard-card rounded-xl bg-white p-4">
-            <div className="mb-1 text-xs font-medium text-zinc-500">Reste à dépenser</div>
+            <div className="mb-1 text-xs font-medium text-zinc-500">{isIndependant ? 'Reste' : 'Reste a depenser'}</div>
             <div
               className={`text-xl font-bold ${remaining >= 0 ? "text-zinc-900" : "text-red-600"}`}
             >
@@ -590,6 +835,16 @@ export default function Dashboard() {
                     {c.icon} {c.name}
                   </option>
                 ))}
+                {isIndependant && (
+                  <>
+                    <option disabled>--- Pro ---</option>
+                    {PRO_CATEGORIES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon} {c.name}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
             <div>
