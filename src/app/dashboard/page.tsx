@@ -61,6 +61,7 @@ interface BillToPay {
   amount: number;
   dueDate: string;
   paid: boolean;
+  category?: string;
 }
 
 interface BudgetData {
@@ -239,6 +240,7 @@ export default function Dashboard() {
   const [newBillToPayName, setNewBillToPayName] = useState("");
   const [newBillToPayAmount, setNewBillToPayAmount] = useState("");
   const [newBillToPayDate, setNewBillToPayDate] = useState(todayStr());
+  const [newBillToPayCategory, setNewBillToPayCategory] = useState("autre");
   const isIndépendant = budget.mode === 'independant';
 
   // Load data
@@ -551,11 +553,13 @@ export default function Dashboard() {
       amount: Math.round(parsed * 100) / 100,
       dueDate: newBillToPayDate,
       paid: false,
+      category: newBillToPayCategory,
     };
     persist({ ...budget, billsToPay: [...budget.billsToPay, bill] });
     setNewBillToPayName("");
     setNewBillToPayAmount("");
     setNewBillToPayDate(todayStr());
+    setNewBillToPayCategory("autre");
   }
 
   const [payingBillId, setPayingBillId] = useState<string | null>(null);
@@ -1317,7 +1321,10 @@ export default function Dashboard() {
                     <div key={bill.id} className={`rounded-lg p-2.5 ${bill.paid ? 'bg-green-50' : 'bg-red-50'}`}>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className={`text-sm font-medium ${bill.paid ? 'text-green-700 line-through' : 'text-zinc-800'}`}>{bill.name}</div>
+                          <div className={`text-sm font-medium ${bill.paid ? 'text-green-700 line-through' : 'text-zinc-800'}`}>
+                            {bill.category && <span className="mr-1">{getCategoryInfo(bill.category).icon}</span>}
+                            {bill.name}
+                          </div>
                           <div className="text-[11px] text-zinc-400">Échéance : {formatDate(bill.dueDate)}</div>
                         </div>
                         <span className={`text-sm font-semibold ${bill.paid ? 'text-green-600' : 'text-red-600'}`}>{formatCHF(bill.amount)} CHF</span>
@@ -1399,6 +1406,15 @@ export default function Dashboard() {
                     onChange={(e) => setNewBillToPayDate(e.target.value)}
                     className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
                   />
+                  <select
+                    value={newBillToPayCategory}
+                    onChange={(e) => setNewBillToPayCategory(e.target.value)}
+                    className="col-span-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                  >
+                    {ALL_CATEGORIES.map((c) => (
+                      <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <button
                   onClick={addBillToPay}
