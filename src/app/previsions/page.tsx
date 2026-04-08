@@ -91,6 +91,20 @@ const CATEGORIES = [
   { id: "autre", icon: "📦", name: "Autre" },
 ] as const;
 
+const INCOME_CATEGORIES = [
+  { id: "salaire", icon: "💼", name: "Salaire" },
+  { id: "loyer_locataire", icon: "🏠", name: "Loyer locataire" },
+  { id: "commission", icon: "💸", name: "Commission" },
+  { id: "pension", icon: "🏛️", name: "Pension/Rente" },
+  { id: "allocations", icon: "👨‍👩‍👧", name: "Allocations" },
+  { id: "freelance", icon: "💻", name: "Freelance" },
+  { id: "autre_revenu", icon: "📦", name: "Autre" },
+] as const;
+
+function getIncomeCategoryInfo(id: string) {
+  return INCOME_CATEGORIES.find((c) => c.id === id) || INCOME_CATEGORIES[INCOME_CATEGORIES.length - 1];
+}
+
 const EXPENSE_SUGGESTIONS = [
   { name: "Loyer", category: "loyer", amount: 1500 },
   { name: "Caisse maladie (LAMal)", category: "lamal", amount: 380 },
@@ -174,7 +188,7 @@ export default function Previsions() {
   // Form state income
   const [incName, setIncName] = useState("");
   const [incAmount, setIncAmount] = useState("");
-  const [incCategory, setIncCategory] = useState("autre");
+  const [incCategory, setIncCategory] = useState("salaire");
 
   // Form state expense
   const [expName, setExpName] = useState("");
@@ -215,7 +229,7 @@ export default function Previsions() {
     persistRecurring([...recurring, item]);
     setIncName("");
     setIncAmount("");
-    setIncCategory("autre");
+    setIncCategory("salaire");
   }
 
   // Add recurring expense
@@ -372,7 +386,7 @@ export default function Previsions() {
     <div className="min-h-screen bg-zinc-50 pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Link
             href="/dashboard"
             className="flex items-center gap-2 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
@@ -390,7 +404,7 @@ export default function Previsions() {
       </header>
 
       {/* Section Tabs */}
-      <div className="mx-auto max-w-lg px-4 pt-3">
+      <div className="mx-auto max-w-3xl px-4 pt-3">
         <div className="flex rounded-xl bg-white p-1 shadow-sm border border-zinc-100">
           {[
             { key: "recurring" as const, label: "Charges fixes" },
@@ -412,7 +426,7 @@ export default function Previsions() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-lg px-4 pt-4 space-y-4">
+      <div className="mx-auto max-w-3xl px-4 pt-4 space-y-4">
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* SECTION A: CHARGES FIXES MENSUELLES */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -440,7 +454,7 @@ export default function Previsions() {
             </div>
 
             {/* Two columns on desktop, stacked on mobile */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {/* Revenus récurrents */}
               <div className="rounded-2xl bg-white p-4 shadow-sm border border-zinc-100">
                 <h3 className="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2">
@@ -454,7 +468,7 @@ export default function Previsions() {
 
                 <div className="space-y-2 mb-3">
                   {recurringIncomes.map((item) => {
-                    const cat = getCategoryInfo(item.category);
+                    const cat = getIncomeCategoryInfo(item.category);
                     return (
                       <div key={item.id} className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2">
                         <div className="flex items-center gap-2">
@@ -499,7 +513,7 @@ export default function Previsions() {
                       onChange={(e) => setIncCategory(e.target.value)}
                       className="rounded-lg border border-zinc-200 px-2 py-2 text-xs focus:border-violet-400 focus:outline-none"
                     >
-                      {CATEGORIES.map((c) => (
+                      {INCOME_CATEGORIES.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.icon} {c.name}
                         </option>
