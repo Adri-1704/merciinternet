@@ -931,7 +931,7 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-lg sm:max-w-none items-center justify-between px-4 py-3">
           <Link href="/" className="text-lg font-bold">
             Merci<span className="text-violet-600">internet</span>
           </Link>
@@ -972,7 +972,7 @@ export default function Dashboard() {
       </header>
 
       {/* Mode Toggle */}
-      <div className="mx-auto max-w-lg px-4 pt-3 pb-1">
+      <div className="mx-auto max-w-lg sm:max-w-none px-4 pt-3 pb-1">
         <div className="flex items-center justify-center">
           <div className="inline-flex rounded-full bg-zinc-100 p-0.5 text-xs font-medium">
             <button
@@ -1014,7 +1014,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <main className="mx-auto max-w-lg px-4 pb-8 pt-4">
+      <main className="mx-auto max-w-lg sm:max-w-none px-4 pb-8 pt-4">
         {/* Summary Cards */}
         <div className="mb-6 grid grid-cols-2 gap-3">
           {/* Income / Invoices card */}
