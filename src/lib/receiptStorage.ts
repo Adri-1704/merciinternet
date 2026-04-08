@@ -39,6 +39,16 @@ export async function getReceipt(id: string): Promise<string | null> {
   });
 }
 
+export async function getAllReceiptIds(): Promise<string[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).getAllKeys();
+    req.onsuccess = () => resolve(req.result as string[]);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 export async function deleteReceipt(id: string): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
