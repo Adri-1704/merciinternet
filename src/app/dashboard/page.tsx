@@ -671,7 +671,7 @@ export default function Dashboard() {
                       type="number"
                       defaultValue={person.amount}
                       onBlur={(e) => updateIncomeAmount(person.id, e.target.value)}
-                      className="w-24 rounded-lg border border-zinc-200 px-2 py-1 text-right text-sm font-semibold focus:border-violet-500 focus:outline-none"
+                      className="w-24 rounded-lg border border-zinc-200 px-2 py-1 text-right text-base font-semibold focus:border-violet-500 focus:outline-none"
                     />
                     <span className="text-xs text-zinc-400">CHF</span>
                     <button onClick={() => removeIncomePerson(person.id)} className="rounded-lg p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500">
@@ -693,7 +693,7 @@ export default function Dashboard() {
                 value={newPersonName}
                 onChange={(e) => setNewPersonName(e.target.value)}
                 placeholder="Prénom"
-                className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
               />
               <input
                 type="number"
@@ -701,7 +701,7 @@ export default function Dashboard() {
                 onChange={(e) => setNewPersonAmount(e.target.value)}
                 placeholder="Revenu"
                 onKeyDown={(e) => e.key === "Enter" && addIncomePerson()}
-                className="w-28 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                className="w-28 rounded-xl border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
               />
               <button
                 onClick={addIncomePerson}
@@ -779,14 +779,14 @@ export default function Dashboard() {
                   value={invoiceClient}
                   onChange={(e) => setInvoiceClient(e.target.value)}
                   placeholder="Nom du client"
-                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
                 />
                 <input
                   type="number"
                   value={invoiceAmount}
                   onChange={(e) => setInvoiceAmount(e.target.value)}
                   placeholder="Montant"
-                  className="w-28 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                  className="w-28 rounded-xl border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
                 />
               </div>
               <div className="flex gap-2">
@@ -794,7 +794,7 @@ export default function Dashboard() {
                   type="date"
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
                 />
                 <button
                   onClick={addInvoice}
@@ -837,7 +837,7 @@ export default function Dashboard() {
                         type="number"
                         defaultValue={account.balance}
                         onBlur={(e) => updateAccountBalance(account.id, e.target.value)}
-                        className="w-28 rounded-lg border border-zinc-200 px-2 py-1 text-right text-sm font-semibold focus:border-violet-500 focus:outline-none"
+                        className="w-28 rounded-lg border border-zinc-200 px-2 py-1 text-right text-base font-semibold focus:border-violet-500 focus:outline-none"
                       />
                       <span className="text-xs text-zinc-400">CHF</span>
                       <button onClick={() => deleteBankAccount(account.id)} className="rounded-lg p-1 text-zinc-300 hover:bg-red-50 hover:text-red-500">
@@ -857,7 +857,7 @@ export default function Dashboard() {
                   value={newAccountName}
                   onChange={(e) => setNewAccountName(e.target.value)}
                   placeholder="Nom du compte"
-                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                  className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
                 />
                 <input
                   type="number"
@@ -869,7 +869,7 @@ export default function Dashboard() {
                       addBankAccount(showTreasuryPanel!);
                     }
                   }}
-                  className="w-28 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
+                  className="w-28 rounded-xl border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none"
                 />
                 <button
                   onClick={() => addBankAccount(showTreasuryPanel!)}
@@ -1257,25 +1257,25 @@ export default function Dashboard() {
                     value={newBillName}
                     onChange={(e) => setNewBillName(e.target.value)}
                     placeholder="Nom de la facture"
-                    className="col-span-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                    className="col-span-2 rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-500 focus:outline-none"
                   />
                   <input
                     type="number"
                     value={newBillAmount}
                     onChange={(e) => setNewBillAmount(e.target.value)}
                     placeholder="Montant CHF"
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-500 focus:outline-none"
                   />
                   <input
                     type="date"
                     value={newBillDate}
                     onChange={(e) => setNewBillDate(e.target.value)}
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-500 focus:outline-none"
                   />
                   <select
                     value={newBillCategory}
                     onChange={(e) => setNewBillCategory(e.target.value)}
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-500 focus:outline-none"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
@@ -1344,7 +1344,7 @@ export default function Dashboard() {
                           <select
                             value={payFromAccount}
                             onChange={(e) => setPayFromAccount(e.target.value)}
-                            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-500 focus:outline-none"
                           >
                             <option value="">Sans déduire d&apos;un compte</option>
                             {budget.bankAccounts.map((a) => (
@@ -1391,25 +1391,25 @@ export default function Dashboard() {
                     value={newBillToPayName}
                     onChange={(e) => setNewBillToPayName(e.target.value)}
                     placeholder="Nom (fournisseur, taxe...)"
-                    className="col-span-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                    className="col-span-2 rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-500 focus:outline-none"
                   />
                   <input
                     type="number"
                     value={newBillToPayAmount}
                     onChange={(e) => setNewBillToPayAmount(e.target.value)}
                     placeholder="Montant CHF"
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-500 focus:outline-none"
                   />
                   <input
                     type="date"
                     value={newBillToPayDate}
                     onChange={(e) => setNewBillToPayDate(e.target.value)}
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-500 focus:outline-none"
                   />
                   <select
                     value={newBillToPayCategory}
                     onChange={(e) => setNewBillToPayCategory(e.target.value)}
-                    className="col-span-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                    className="col-span-2 rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-500 focus:outline-none"
                   >
                     {ALL_CATEGORIES.map((c) => (
                       <option key={c.id} value={c.id}>{c.icon} {c.name}</option>

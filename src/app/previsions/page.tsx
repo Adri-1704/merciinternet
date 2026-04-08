@@ -498,7 +498,7 @@ export default function Previsions() {
                     placeholder="Nom (ex: Salaire)"
                     value={incName}
                     onChange={(e) => setIncName(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:border-violet-400 focus:outline-none"
+                    className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-400 focus:outline-none"
                   />
                   <div className="flex gap-2">
                     <input
@@ -506,12 +506,12 @@ export default function Previsions() {
                       placeholder="Montant"
                       value={incAmount}
                       onChange={(e) => setIncAmount(e.target.value)}
-                      className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:border-violet-400 focus:outline-none"
+                      className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-400 focus:outline-none"
                     />
                     <select
                       value={incCategory}
                       onChange={(e) => setIncCategory(e.target.value)}
-                      className="rounded-lg border border-zinc-200 px-2 py-2 text-xs focus:border-violet-400 focus:outline-none"
+                      className="rounded-lg border border-zinc-200 px-2 py-2 text-base focus:border-violet-400 focus:outline-none"
                     >
                       {INCOME_CATEGORIES.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -598,7 +598,7 @@ export default function Previsions() {
                     placeholder="Nom (ex: Loyer)"
                     value={expName}
                     onChange={(e) => setExpName(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:border-violet-400 focus:outline-none"
+                    className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-400 focus:outline-none"
                   />
                   <div className="flex gap-2">
                     <input
@@ -606,12 +606,12 @@ export default function Previsions() {
                       placeholder="Montant"
                       value={expAmount}
                       onChange={(e) => setExpAmount(e.target.value)}
-                      className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:border-violet-400 focus:outline-none"
+                      className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-base focus:border-violet-400 focus:outline-none"
                     />
                     <select
                       value={expCategory}
                       onChange={(e) => setExpCategory(e.target.value)}
-                      className="rounded-lg border border-zinc-200 px-2 py-2 text-xs focus:border-violet-400 focus:outline-none"
+                      className="rounded-lg border border-zinc-200 px-2 py-2 text-base focus:border-violet-400 focus:outline-none"
                     >
                       {CATEGORIES.map((c) => (
                         <option key={c.id} value={c.id}>
