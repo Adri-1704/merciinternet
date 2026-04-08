@@ -524,12 +524,58 @@ export default function Dashboard() {
     setNewBillToPayDate(todayStr());
   }
 
-  function toggleBillToPay(id: string) {
+  const [payingBillId, setPayingBillId] = useState<string | null>(null);
+  const [payFromAccount, setPayFromAccount] = useState<string>("");
+
+  function markBillAsPaid(id: string) {
+    const bill = budget.billsToPay.find((b) => b.id === id);
+    if (!bill) return;
+
+    // Create expense from bill
+    const newExpense: Expense = {
+      id: crypto.randomUUID(),
+      amount: bill.amount,
+      category: "autre",
+      description: `Facture: ${bill.name}`,
+      date: todayStr(),
+      createdAt: new Date().toISOString(),
+    };
+
+    // Deduct from selected bank account
+    const updatedAccounts = payFromAccount
+      ? budget.bankAccounts.map((a) =>
+          a.id === payFromAccount ? { ...a, balance: Math.round((a.balance - bill.amount) * 100) / 100 } : a
+        )
+      : budget.bankAccounts;
+
     persist({
       ...budget,
       billsToPay: budget.billsToPay.map((b) =>
-        b.id === id ? { ...b, paid: !b.paid } : b
+        b.id === id ? { ...b, paid: true } : b
       ),
+      expenses: [...budget.expenses, newExpense],
+      bankAccounts: updatedAccounts,
+    });
+
+    setPayingBillId(null);
+    setPayFromAccount("");
+  }
+
+  function unmarkBillAsPaid(id: string) {
+    const bill = budget.billsToPay.find((b) => b.id === id);
+    if (!bill) return;
+
+    // Remove the expense that was created
+    const updatedExpenses = budget.expenses.filter(
+      (e) => !(e.description === `Facture: ${bill.name}` && e.amount === bill.amount)
+    );
+
+    persist({
+      ...budget,
+      billsToPay: budget.billsToPay.map((b) =>
+        b.id === id ? { ...b, paid: false } : b
+      ),
+      expenses: updatedExpenses,
     });
   }
 
@@ -1229,12 +1275,50 @@ export default function Dashboard() {
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
-                      <button
-                        onClick={() => toggleBillToPay(bill.id)}
-                        className={`mt-2 w-full rounded-lg py-1.5 text-xs font-semibold transition-colors ${bill.paid ? 'bg-green-200 text-green-800 hover:bg-green-300' : 'bg-red-200 text-red-800 hover:bg-red-300'}`}
-                      >
-                        {bill.paid ? '✅ Payée — Cliquer pour annuler' : '💳 Marquer comme payée'}
-                      </button>
+                      {bill.paid ? (
+                        <button
+                          onClick={() => unmarkBillAsPaid(bill.id)}
+                          className="mt-2 w-full rounded-lg py-1.5 text-xs font-semibold bg-green-200 text-green-800 hover:bg-green-300 transition-colors"
+                        >
+                          ✅ Payée — Cliquer pour annuler
+                        </button>
+                      ) : payingBillId === bill.id ? (
+                        <div className="mt-2 space-y-2">
+                          <select
+                            value={payFromAccount}
+                            onChange={(e) => setPayFromAccount(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none"
+                          >
+                            <option value="">Sans déduire d&apos;un compte</option>
+                            {budget.bankAccounts.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.name} ({formatCHF(a.balance)} CHF)
+                              </option>
+                            ))}
+                          </select>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => markBillAsPaid(bill.id)}
+                              className="flex-1 rounded-lg bg-violet-600 py-2 text-xs font-semibold text-white hover:bg-violet-700"
+                            >
+                              Confirmer le paiement
+                            </button>
+                            <button
+                              onClick={() => { setPayingBillId(null); setPayFromAccount(""); }}
+                              className="rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-500 hover:bg-zinc-50"
+                            >
+                              Annuler
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setPayingBillId(bill.id)}
+                          className="mt-2 w-full rounded-lg py-1.5 text-xs font-semibold bg-red-200 text-red-800 hover:bg-red-300 transition-colors"
+                        >
+                          💳 Marquer comme payée
+                        </button>
+                      )}
                     </div>
                   ))}
                   <div className="flex justify-between rounded-lg bg-red-50 p-2.5 text-sm font-bold text-red-700">
