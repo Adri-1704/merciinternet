@@ -3,6 +3,17 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import ReceiptScanner from "@/components/ReceiptScanner";
+import GamificationBar from "@/components/GamificationBar";
+import GamificationPanel from "@/components/GamificationPanel";
+import {
+  GamificationData,
+  loadGamification,
+  saveGamification,
+  onExpenseAdded,
+  onScanCompleted,
+  calculateMonthlyScore,
+  generateChallenges,
+} from "@/lib/gamification";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -141,6 +152,9 @@ export default function Dashboard() {
   const [showScanner, setShowScanner] = useState(false);
   const [newPersonName, setNewPersonName] = useState("");
   const [newPersonAmount, setNewPersonAmount] = useState("");
+  const [gamData, setGamData] = useState<GamificationData | null>(null);
+  const [showGamification, setShowGamification] = useState(false);
+  const [newBadgeToast, setNewBadgeToast] = useState<string | null>(null);
 
   // Load data
   useEffect(() => {
@@ -148,6 +162,16 @@ export default function Dashboard() {
     setBudget(data);
     setLoaded(true);
   }, [monthKey]);
+
+  // Load gamification data
+  useEffect(() => {
+    const gd = loadGamification();
+    // Recalculate score & challenges on load
+    gd.monthlyScore = calculateMonthlyScore(gd, budget);
+    gd.challenges = generateChallenges(budget, gd);
+    saveGamification(gd);
+    setGamData(gd);
+  }, [loaded, budget]);
 
   // Save data
   const persist = useCallback(
@@ -204,10 +228,21 @@ export default function Dashboard() {
       createdAt: new Date().toISOString(),
     };
 
-    persist({
+    const updatedBudget = {
       ...budget,
       expenses: [...budget.expenses, newExpense],
-    });
+    };
+    persist(updatedBudget);
+
+    // Update gamification
+    if (gamData) {
+      const result = onExpenseAdded(gamData, updatedBudget, 1);
+      setGamData(result.gamData);
+      if (result.newBadges.length > 0) {
+        setNewBadgeToast(result.newBadges[0]);
+        setTimeout(() => setNewBadgeToast(null), 3000);
+      }
+    }
 
     setAmount("");
     setDescription("");
@@ -268,10 +303,21 @@ export default function Dashboard() {
       createdAt: new Date().toISOString(),
     }));
 
-    persist({
+    const updatedBudget = {
       ...budget,
       expenses: [...budget.expenses, ...newExpenses],
-    });
+    };
+    persist(updatedBudget);
+
+    // Update gamification
+    if (gamData) {
+      const result = onScanCompleted(gamData, updatedBudget, newExpenses.length);
+      setGamData(result.gamData);
+      if (result.newBadges.length > 0) {
+        setNewBadgeToast(result.newBadges[0]);
+        setTimeout(() => setNewBadgeToast(null), 3000);
+      }
+    }
 
     setShowScanner(false);
   }
@@ -395,6 +441,29 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* Gamification Bar */}
+      {gamData && (
+        <GamificationBar data={gamData} onOpen={() => setShowGamification(true)} />
+      )}
+
+      {/* Gamification Panel */}
+      {showGamification && gamData && (
+        <GamificationPanel
+          data={gamData}
+          budget={budget}
+          onClose={() => setShowGamification(false)}
+        />
+      )}
+
+      {/* Badge unlock toast */}
+      {newBadgeToast && (
+        <div className="fixed top-20 left-1/2 z-[60] -translate-x-1/2 animate-bounce rounded-2xl bg-violet-600 px-5 py-3 text-center text-white shadow-xl">
+          <div className="text-2xl">🏆</div>
+          <div className="text-sm font-bold">Nouveau badge débloqué !</div>
+          <div className="text-xs text-violet-200">{newBadgeToast}</div>
+        </div>
+      )}
 
       <main className="mx-auto max-w-lg px-4 pb-8 pt-4">
         {/* Summary Cards */}
