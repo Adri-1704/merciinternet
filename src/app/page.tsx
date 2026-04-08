@@ -86,7 +86,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
             <span className="text-xl font-bold text-indigo-950">
-              Merci<span className="text-violet-600">Internet</span>
+              Merci<span className="text-violet-600">internet</span>
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -385,7 +385,7 @@ export default function Home() {
           <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
             <div>
               <span className="text-lg font-bold text-white">
-                Merci<span className="text-violet-400">Internet</span>.ch
+                Merci<span className="text-violet-400">internet</span>.ch
               </span>
               <p className="mt-1 text-sm text-indigo-300/60">
                 Le Bouveret, Valais, Suisse
