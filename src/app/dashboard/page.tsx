@@ -225,7 +225,7 @@ export default function Dashboard() {
   const [newBillAmount, setNewBillAmount] = useState("");
   const [newBillDate, setNewBillDate] = useState(todayStr());
   const [newBillCategory, setNewBillCategory] = useState("autre");
-  const isIndependant = budget.mode === 'independant';
+  const isIndépendant = budget.mode === 'independant';
 
   // Load data
   useEffect(() => {
@@ -261,7 +261,7 @@ export default function Dashboard() {
   const totalPaidInvoices = budget.invoices.filter((inv) => inv.paid).reduce((s, inv) => s + inv.amount, 0);
   const totalPendingInvoices = totalInvoiced - totalPaidInvoices;
 
-  const totalIncome = isIndependant
+  const totalIncome = isIndépendant
     ? totalPaidInvoices
     : budget.incomes.length > 0
       ? budget.incomes.reduce((s, p) => s + p.amount, 0)
@@ -605,7 +605,7 @@ export default function Dashboard() {
             {/* Summary */}
             <div className="mb-4 grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-green-50 p-3 text-center">
-                <div className="text-xs text-green-600 font-medium">Encaisse</div>
+                <div className="text-xs text-green-600 font-medium">Encaissé</div>
                 <div className="text-lg font-bold text-green-700">{formatCHF(totalPaidInvoices)} CHF</div>
               </div>
               <div className="rounded-xl bg-orange-50 p-3 text-center">
@@ -625,7 +625,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => toggleInvoicePaid(inv.id)}
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg ${inv.paid ? 'bg-green-100' : 'bg-orange-100'}`}
-                      title={inv.paid ? 'Encaissee' : 'En attente'}
+                      title={inv.paid ? 'Encaissée' : 'En attente'}
                     >
                       {inv.paid ? '✅' : '⏳'}
                     </button>
@@ -678,7 +678,7 @@ export default function Dashboard() {
               </div>
             </div>
             <p className="mt-2 text-center text-xs text-zinc-400">
-              Cliquez sur le statut pour basculer entre encaissee et en attente
+              Cliquez sur le statut pour basculer entre encaissée et en attente
             </p>
           </div>
         </div>
@@ -690,7 +690,7 @@ export default function Dashboard() {
           <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold">
-                {showTreasuryPanel === 'perso' ? 'Tresorerie personnelle' : 'Tresorerie professionnelle'}
+                {showTreasuryPanel === 'perso' ? 'Trésorerie personnelle' : 'Trésorerie professionnelle'}
               </h3>
               <button onClick={() => setShowTreasuryPanel(null)} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -759,14 +759,14 @@ export default function Dashboard() {
               <div className="space-y-2">
                 <div className="flex justify-between rounded-xl bg-green-50 p-3 text-sm">
                   <span className="text-green-700 font-medium">
-                    {showTreasuryPanel === 'perso' ? 'Revenus' : 'Factures encaissees'}
+                    {showTreasuryPanel === 'perso' ? 'Revenus' : 'Factures encaissées'}
                   </span>
                   <span className="text-green-700 font-bold">
                     +{formatCHF(showTreasuryPanel === 'perso' ? persoIncome : proIncome)} CHF
                   </span>
                 </div>
                 <div className="flex justify-between rounded-xl bg-red-50 p-3 text-sm">
-                  <span className="text-red-600 font-medium">Depenses</span>
+                  <span className="text-red-600 font-medium">Dépenses</span>
                   <span className="text-red-600 font-bold">
                     -{formatCHF(showTreasuryPanel === 'perso' ? totalPersoExpenses : totalProExpenses)} CHF
                   </span>
@@ -848,7 +848,7 @@ export default function Dashboard() {
               onClick={() => budget.mode !== 'independant' && toggleMode()}
               className={`rounded-full px-3 py-1 transition-colors ${budget.mode === 'independant' ? 'bg-violet-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
             >
-              Independant
+              Indépendant
             </button>
           </div>
         </div>
@@ -881,15 +881,15 @@ export default function Dashboard() {
         {/* Summary Cards */}
         <div className="mb-6 grid grid-cols-2 gap-3">
           {/* Income / Invoices card */}
-          {isIndependant ? (
+          {isIndépendant ? (
             <>
-              {/* Facture ce mois */}
+              {/* Facturé ce mois */}
               <div
                 className="dashboard-card cursor-pointer rounded-xl bg-white p-4"
                 onClick={() => setShowInvoicePanel(true)}
               >
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500">Facture ce mois</span>
+                  <span className="text-xs font-medium text-zinc-500">Facturé ce mois</span>
                   {budget.invoices.length > 0 && (
                     <span className="text-[10px] text-zinc-400">{budget.invoices.length} facture{budget.invoices.length > 1 ? "s" : ""}</span>
                   )}
@@ -901,7 +901,7 @@ export default function Dashboard() {
                 {budget.invoices.length > 0 && (
                   <div className="mt-2 space-y-0.5">
                     <div className="flex justify-between text-[11px]">
-                      <span className="text-green-600">Encaisse</span>
+                      <span className="text-green-600">Encaissé</span>
                       <span className="text-green-600 font-medium">{formatCHF(totalPaidInvoices)}</span>
                     </div>
                     <div className="flex justify-between text-[11px]">
@@ -914,7 +914,7 @@ export default function Dashboard() {
 
               {/* Encaisse */}
               <div className="dashboard-card rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 p-4">
-                <div className="mb-1 text-xs font-medium text-green-100">Encaisse</div>
+                <div className="mb-1 text-xs font-medium text-green-100">Encaissé</div>
                 <div className="text-xl font-bold text-white">
                   {formatCHF(totalPaidInvoices)}
                   <span className="ml-1 text-xs font-normal text-green-200">CHF</span>
@@ -950,8 +950,8 @@ export default function Dashboard() {
           )}
 
           {/* Expenses */}
-          <div className={`dashboard-card rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 p-4 ${isIndependant ? 'col-span-1' : ''}`}>
-            <div className="mb-1 text-xs font-medium text-violet-100">Depenses du mois</div>
+          <div className={`dashboard-card rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 p-4 ${isIndépendant ? 'col-span-1' : ''}`}>
+            <div className="mb-1 text-xs font-medium text-violet-100">Dépenses du mois</div>
             <div className="text-xl font-bold text-white">
               {formatCHF(totalExpenses)}
               <span className="ml-1 text-xs font-normal text-violet-200">CHF</span>
@@ -960,7 +960,7 @@ export default function Dashboard() {
 
           {/* Remaining */}
           <div className="dashboard-card rounded-xl bg-white p-4">
-            <div className="mb-1 text-xs font-medium text-zinc-500">{isIndependant ? 'Reste' : 'Reste a depenser'}</div>
+            <div className="mb-1 text-xs font-medium text-zinc-500">{isIndépendant ? 'Reste' : 'Reste à dépenser'}</div>
             <div
               className={`text-xl font-bold ${remaining >= 0 ? "text-zinc-900" : "text-red-600"}`}
             >
@@ -1016,15 +1016,15 @@ export default function Dashboard() {
         </div>
 
         {/* Treasury Section */}
-        <div className={`mb-6 grid gap-3 ${isIndependant ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {/* Tresorerie personnelle */}
+        <div className={`mb-6 grid gap-3 ${isIndépendant ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Trésorerie personnelle */}
           <div
             className="cursor-pointer rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 p-4 border border-emerald-100 transition-shadow hover:shadow-md"
             onClick={() => setShowTreasuryPanel('perso')}
           >
             <div className="mb-2 flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span className="text-xs font-semibold text-emerald-700">Tresorerie perso</span>
+              <span className="text-xs font-semibold text-emerald-700">Trésorerie perso</span>
             </div>
             <div className="text-lg font-bold text-zinc-900">
               {formatCHF(totalPersoBalance)}
@@ -1046,15 +1046,15 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Tresorerie professionnelle (independant only) */}
-          {isIndependant && (
+          {/* Trésorerie professionnelle (independant only) */}
+          {isIndépendant && (
             <div
               className="cursor-pointer rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 p-4 border border-indigo-100 transition-shadow hover:shadow-md"
               onClick={() => setShowTreasuryPanel('pro')}
             >
               <div className="mb-2 flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-indigo-500" />
-                <span className="text-xs font-semibold text-indigo-700">Tresorerie pro</span>
+                <span className="text-xs font-semibold text-indigo-700">Trésorerie pro</span>
               </div>
               <div className="text-lg font-bold text-zinc-900">
                 {formatCHF(totalProBalance)}
@@ -1189,7 +1189,7 @@ export default function Dashboard() {
                     {c.icon} {c.name}
                   </option>
                 ))}
-                {isIndependant && (
+                {isIndépendant && (
                   <>
                     <option disabled>--- Pro ---</option>
                     {PRO_CATEGORIES.map((c) => (
