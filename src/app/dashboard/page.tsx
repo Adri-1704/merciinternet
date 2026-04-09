@@ -245,6 +245,7 @@ export default function Dashboard() {
   const [newBillToPayDate, setNewBillToPayDate] = useState(todayStr());
   const [newBillToPayCategory, setNewBillToPayCategory] = useState("autre");
   const [showExportModal, setShowExportModal] = useState(false);
+  const [exportMonths, setExportMonths] = useState<string[]>([]);
   const [receiptViewer, setReceiptViewer] = useState<string | null>(null);
   const [fiduciaryEmail, setFiduciaryEmail] = useState("");
   const [fiduciaryName, setFiduciaryName] = useState("");
@@ -670,31 +671,71 @@ export default function Dashboard() {
 
   const monthLabel = `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
+  // Generate list of available months (current year)
+  const availableMonths: { key: string; label: string }[] = [];
+  for (let m = 0; m < 12; m++) {
+    const y = currentDate.getFullYear();
+    const mk = getMonthKey(y, m);
+    availableMonths.push({ key: mk, label: `${MONTH_NAMES[m]} ${y}` });
+  }
+
+  function toggleExportMonth(mk: string) {
+    setExportMonths((prev) =>
+      prev.includes(mk) ? prev.filter((m) => m !== mk) : [...prev, mk]
+    );
+  }
+
+  function getExportBudgets(): { data: BudgetData; monthKey: string; label: string }[] {
+    const months = exportMonths.length > 0 ? exportMonths : [monthKey];
+    return months.sort().map((mk) => {
+      const [y, m] = mk.split("-");
+      return {
+        data: loadBudget(mk),
+        monthKey: mk,
+        label: `${MONTH_NAMES[parseInt(m) - 1]} ${y}`,
+      };
+    });
+  }
+
+  function getExportLabel(): string {
+    if (exportMonths.length === 0) return monthLabel;
+    if (exportMonths.length === 1) {
+      const [y, m] = exportMonths[0].split("-");
+      return `${MONTH_NAMES[parseInt(m) - 1]} ${y}`;
+    }
+    return `${exportMonths.length} mois`;
+  }
+
+  function getExportFilename(): string {
+    if (exportMonths.length <= 1) {
+      const mk = exportMonths.length === 1 ? exportMonths[0] : monthKey;
+      return `merciinternet_${mk}`;
+    }
+    const sorted = [...exportMonths].sort();
+    return `merciinternet_${sorted[0]}_${sorted[sorted.length - 1]}`;
+  }
+
   function exportCSV() {
+    const budgets = getExportBudgets();
     const lines: string[] = [];
-    lines.push("Type,Date,Catégorie,Description,Montant CHF");
+    lines.push("Mois,Type,Date,Catégorie,Description,Montant CHF");
 
-    // Dépenses
-    for (const exp of budget.expenses) {
-      const cat = getCategoryInfo(exp.category);
-      lines.push(`Dépense,${exp.date},${cat.name},"${exp.description.replace(/"/g, '""')}",${exp.amount.toFixed(2)}`);
-    }
-
-    // Factures clients (indépendant)
-    for (const inv of budget.invoices) {
-      lines.push(`Facture client,${inv.date},,${inv.clientName.replace(/"/g, '""')},${inv.amount.toFixed(2)}`);
-    }
-
-    // Factures payées
-    for (const bill of budget.paidBills) {
-      const cat = getCategoryInfo(bill.category);
-      lines.push(`Facture payée,${bill.date},${cat.name},"${bill.name.replace(/"/g, '""')}",${bill.amount.toFixed(2)}`);
-    }
-
-    // Factures à payer
-    for (const bill of budget.billsToPay) {
-      const cat = bill.category ? getCategoryInfo(bill.category) : { name: "Autre" };
-      lines.push(`À payer${bill.paid ? " (payée)" : ""},${bill.dueDate},${cat.name},"${bill.name.replace(/"/g, '""')}",${bill.amount.toFixed(2)}`);
+    for (const { data, label } of budgets) {
+      for (const exp of data.expenses) {
+        const cat = getCategoryInfo(exp.category);
+        lines.push(`${label},Dépense,${exp.date},${cat.name},"${exp.description.replace(/"/g, '""')}",${exp.amount.toFixed(2)}`);
+      }
+      for (const inv of data.invoices) {
+        lines.push(`${label},Facture client,${inv.date},,"${inv.clientName.replace(/"/g, '""')}",${inv.amount.toFixed(2)}`);
+      }
+      for (const bill of data.paidBills) {
+        const cat = getCategoryInfo(bill.category);
+        lines.push(`${label},Facture payée,${bill.date},${cat.name},"${bill.name.replace(/"/g, '""')}",${bill.amount.toFixed(2)}`);
+      }
+      for (const bill of data.billsToPay) {
+        const cat = bill.category ? getCategoryInfo(bill.category) : { name: "Autre" };
+        lines.push(`${label},À payer${bill.paid ? " (payée)" : ""},${bill.dueDate},${cat.name},"${bill.name.replace(/"/g, '""')}",${bill.amount.toFixed(2)}`);
+      }
     }
 
     const csv = "\uFEFF" + lines.join("\n");
@@ -702,23 +743,29 @@ export default function Dashboard() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `merciinternet_${monthKey}.csv`;
+    a.download = `${getExportFilename()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     setShowExportModal(false);
   }
 
   function exportPDF() {
-    const totalExpenses = budget.expenses.reduce((s, e) => s + e.amount, 0);
-    const totalIncome = isIndépendant
-      ? budget.invoices.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
-      : budget.incomes.length > 0
-        ? budget.incomes.reduce((s, p) => s + p.amount, 0)
-        : budget.income;
+    const budgets = getExportBudgets();
+    const exportLabel = getExportLabel();
 
-    // Grouper dépenses par catégorie
+    // Aggregate all data
+    const allExpenses = budgets.flatMap(b => b.data.expenses.map(e => ({ ...e, month: b.label })));
+    const allInvoices = budgets.flatMap(b => b.data.invoices.map(i => ({ ...i, month: b.label })));
+    const allPaidBills = budgets.flatMap(b => b.data.paidBills.map(p => ({ ...p, month: b.label })));
+    const allBillsToPay = budgets.flatMap(b => b.data.billsToPay.map(bt => ({ ...bt, month: b.label })));
+
+    const totalExpenses = allExpenses.reduce((s, e) => s + e.amount, 0);
+    const totalIncome = budgets.reduce((s, b) => {
+      return s + b.data.invoices.filter(i => i.paid).reduce((si, i) => si + i.amount, 0);
+    }, 0);
+
     const expByCategory: Record<string, number> = {};
-    for (const exp of budget.expenses) {
+    for (const exp of allExpenses) {
       const cat = getCategoryInfo(exp.category);
       expByCategory[cat.name] = (expByCategory[cat.name] || 0) + exp.amount;
     }
@@ -727,7 +774,7 @@ export default function Dashboard() {
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Merciinternet — ${monthLabel}</title>
+  <title>Merciinternet — ${exportLabel}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; }
     h1 { color: #7C3AED; font-size: 24px; margin-bottom: 4px; }
@@ -750,7 +797,7 @@ export default function Dashboard() {
 </head>
 <body>
   <h1>Merciinternet</h1>
-  <p class="subtitle">Rapport financier — ${monthLabel}</p>
+  <p class="subtitle">Rapport financier — ${exportLabel}</p>
 
   <div class="summary">
     <div class="summary-card income"><div class="label">Revenus</div><div class="value">${formatCHF(totalIncome)} CHF</div></div>
@@ -758,16 +805,16 @@ export default function Dashboard() {
     <div class="summary-card balance"><div class="label">Solde</div><div class="value">${formatCHF(totalIncome - totalExpenses)} CHF</div></div>
   </div>
 
-  ${budget.expenses.length > 0 ? `
+  ${allExpenses.length > 0 ? `
   <h2>Dépenses</h2>
   <table>
-    <thead><tr><th>Date</th><th>Catégorie</th><th>Description</th><th class="amount">Montant</th></tr></thead>
+    <thead><tr><th>Mois</th><th>Date</th><th>Catégorie</th><th>Description</th><th class="amount">Montant</th></tr></thead>
     <tbody>
-      ${budget.expenses.sort((a, b) => a.date.localeCompare(b.date)).map(exp => {
+      ${allExpenses.sort((a, b) => a.date.localeCompare(b.date)).map(exp => {
         const cat = getCategoryInfo(exp.category);
-        return `<tr><td>${exp.date}</td><td>${cat.icon} ${cat.name}</td><td>${exp.description}</td><td class="amount">${formatCHF(exp.amount)} CHF</td></tr>`;
+        return `<tr><td>${exp.month}</td><td>${exp.date}</td><td>${cat.icon} ${cat.name}</td><td>${exp.description}</td><td class="amount">${formatCHF(exp.amount)} CHF</td></tr>`;
       }).join("")}
-      <tr class="total-row"><td colspan="3">Total dépenses</td><td class="amount">${formatCHF(totalExpenses)} CHF</td></tr>
+      <tr class="total-row"><td colspan="4">Total dépenses</td><td class="amount">${formatCHF(totalExpenses)} CHF</td></tr>
     </tbody>
   </table>` : ""}
 
@@ -782,49 +829,38 @@ export default function Dashboard() {
     </tbody>
   </table>` : ""}
 
-  ${budget.invoices.length > 0 ? `
+  ${allInvoices.length > 0 ? `
   <h2>Factures clients</h2>
   <table>
-    <thead><tr><th>Date</th><th>Client</th><th>Statut</th><th class="amount">Montant</th></tr></thead>
+    <thead><tr><th>Mois</th><th>Date</th><th>Client</th><th>Statut</th><th class="amount">Montant</th></tr></thead>
     <tbody>
-      ${budget.invoices.map(inv =>
-        `<tr><td>${inv.date}</td><td>${inv.clientName}</td><td>${inv.paid ? "Payée" : "En attente"}</td><td class="amount">${formatCHF(inv.amount)} CHF</td></tr>`
+      ${allInvoices.map(inv =>
+        `<tr><td>${inv.month}</td><td>${inv.date}</td><td>${inv.clientName}</td><td>${inv.paid ? "Payée" : "En attente"}</td><td class="amount">${formatCHF(inv.amount)} CHF</td></tr>`
       ).join("")}
     </tbody>
   </table>` : ""}
 
-  ${budget.paidBills.length > 0 ? `
+  ${allPaidBills.length > 0 ? `
   <h2>Factures payées</h2>
   <table>
-    <thead><tr><th>Date</th><th>Catégorie</th><th>Nom</th><th class="amount">Montant</th></tr></thead>
+    <thead><tr><th>Mois</th><th>Date</th><th>Catégorie</th><th>Nom</th><th class="amount">Montant</th></tr></thead>
     <tbody>
-      ${budget.paidBills.map(bill => {
+      ${allPaidBills.map(bill => {
         const cat = getCategoryInfo(bill.category);
-        return `<tr><td>${bill.date}</td><td>${cat.icon} ${cat.name}</td><td>${bill.name}</td><td class="amount">${formatCHF(bill.amount)} CHF</td></tr>`;
+        return `<tr><td>${bill.month}</td><td>${bill.date}</td><td>${cat.icon} ${cat.name}</td><td>${bill.name}</td><td class="amount">${formatCHF(bill.amount)} CHF</td></tr>`;
       }).join("")}
     </tbody>
   </table>` : ""}
 
-  ${budget.billsToPay.length > 0 ? `
+  ${allBillsToPay.length > 0 ? `
   <h2>Factures à payer</h2>
   <table>
-    <thead><tr><th>Échéance</th><th>Catégorie</th><th>Nom</th><th>Statut</th><th class="amount">Montant</th></tr></thead>
+    <thead><tr><th>Mois</th><th>Échéance</th><th>Catégorie</th><th>Nom</th><th>Statut</th><th class="amount">Montant</th></tr></thead>
     <tbody>
-      ${budget.billsToPay.map(bill => {
+      ${allBillsToPay.map(bill => {
         const cat = bill.category ? getCategoryInfo(bill.category) : { icon: "📦", name: "Autre" };
-        return `<tr><td>${bill.dueDate}</td><td>${cat.icon} ${cat.name}</td><td>${bill.name}</td><td>${bill.paid ? "Payée" : "À payer"}</td><td class="amount">${formatCHF(bill.amount)} CHF</td></tr>`;
+        return `<tr><td>${bill.month}</td><td>${bill.dueDate}</td><td>${cat.icon} ${cat.name}</td><td>${bill.name}</td><td>${bill.paid ? "Payée" : "À payer"}</td><td class="amount">${formatCHF(bill.amount)} CHF</td></tr>`;
       }).join("")}
-    </tbody>
-  </table>` : ""}
-
-  ${budget.bankAccounts.length > 0 ? `
-  <h2>Trésorerie</h2>
-  <table>
-    <thead><tr><th>Compte</th><th>Type</th><th class="amount">Solde</th></tr></thead>
-    <tbody>
-      ${budget.bankAccounts.map(a =>
-        `<tr><td>${a.name}</td><td>${a.type === "perso" ? "Personnel" : "Professionnel"}</td><td class="amount">${formatCHF(a.balance)} CHF</td></tr>`
-      ).join("")}
     </tbody>
   </table>` : ""}
 
@@ -847,24 +883,23 @@ export default function Dashboard() {
       return;
     }
 
+    const budgets = getExportBudgets();
+    const exportLabel = getExportLabel();
+
     // Generate CSV and download it
     exportCSV();
 
     // Build email summary
-    const totalExpenses = budget.expenses.reduce((s, e) => s + e.amount, 0);
-    const totalIncome = isIndépendant
-      ? budget.invoices.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
-      : budget.incomes.length > 0
-        ? budget.incomes.reduce((s, p) => s + p.amount, 0)
-        : budget.income;
-    const totalPaidBills = budget.paidBills.reduce((s, b) => s + b.amount, 0);
-    const totalBillsToPay = budget.billsToPay.filter(b => !b.paid).reduce((s, b) => s + b.amount, 0);
+    const totalExpenses = budgets.reduce((s, b) => s + b.data.expenses.reduce((se, e) => se + e.amount, 0), 0);
+    const totalIncome = budgets.reduce((s, b) => s + b.data.invoices.filter(i => i.paid).reduce((si, i) => si + i.amount, 0), 0);
+    const totalPaidBills = budgets.reduce((s, b) => s + b.data.paidBills.reduce((sp, p) => sp + p.amount, 0), 0);
+    const totalBillsToPay = budgets.reduce((s, b) => s + b.data.billsToPay.filter(bt => !bt.paid).reduce((sb, bt) => sb + bt.amount, 0), 0);
 
-    const subject = encodeURIComponent(`Rapport comptable ${monthLabel} — Merciinternet`);
+    const subject = encodeURIComponent(`Rapport comptable ${exportLabel} — Merciinternet`);
     const body = encodeURIComponent(
 `Bonjour${fiduciaryName ? ` ${fiduciaryName}` : ""},
 
-Veuillez trouver ci-joint le rapport comptable du mois de ${monthLabel}.
+Veuillez trouver ci-joint le rapport comptable : ${exportLabel}.
 
 Résumé :
 - Revenus : ${formatCHF(totalIncome)} CHF
@@ -879,7 +914,6 @@ Cordialement,
 Envoyé depuis Merciinternet.ch`
     );
 
-    // Small delay so CSV download happens first
     setTimeout(() => {
       window.open(`mailto:${fiduciaryEmail}?subject=${subject}&body=${body}`, "_self");
     }, 500);
@@ -1232,7 +1266,7 @@ Envoyé depuis Merciinternet.ch`
               Factures
             </Link>
             <button
-              onClick={() => setShowExportModal(true)}
+              onClick={() => { setExportMonths([monthKey]); setShowExportModal(true); }}
               className="hidden sm:flex items-center gap-1.5 rounded-lg border-2 border-violet-600 px-3 py-1.5 text-xs font-semibold text-violet-600 transition-colors hover:bg-violet-50"
               title="Exporter pour fiduciaire"
             >
@@ -1269,7 +1303,7 @@ Envoyé depuis Merciinternet.ch`
             Factures
           </Link>
           <button
-            onClick={() => setShowExportModal(true)}
+            onClick={() => { setExportMonths([monthKey]); setShowExportModal(true); }}
             className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border-2 border-violet-600 px-3 py-2 text-xs font-semibold text-violet-600 transition-colors hover:bg-violet-50"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1912,8 +1946,30 @@ Envoyé depuis Merciinternet.ch`
       {showExportModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setShowExportModal(false)}>
           <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-zinc-800 mb-1">Exporter {monthLabel}</h2>
-            <p className="text-sm text-zinc-500 mb-5">Choisissez le format d&apos;export pour votre fiduciaire</p>
+            <h2 className="text-lg font-bold text-zinc-800 mb-1">Exporter</h2>
+            <p className="text-sm text-zinc-500 mb-4">Sélectionnez les mois à exporter</p>
+
+            {/* Month selector */}
+            <div className="mb-4 grid grid-cols-4 gap-1.5">
+              {availableMonths.map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => toggleExportMonth(m.key)}
+                  className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                    exportMonths.includes(m.key)
+                      ? "bg-violet-600 text-white"
+                      : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                  }`}
+                >
+                  {m.label.split(" ")[0].slice(0, 3)}
+                </button>
+              ))}
+            </div>
+            <p className="mb-4 text-xs text-zinc-400">
+              {exportMonths.length === 0
+                ? `Mois courant sélectionné : ${monthLabel}`
+                : `${exportMonths.length} mois sélectionné${exportMonths.length > 1 ? "s" : ""}`}
+            </p>
 
             <div className="space-y-3">
               {/* Send to fiduciary */}
