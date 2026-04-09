@@ -111,7 +111,7 @@ export default function Home() {
 
         <div className="relative mx-auto max-w-4xl">
           <div className="animate-fade-in-up mb-6 inline-block rounded-full border border-violet-200 bg-violet-50 px-4 py-1.5 text-sm text-violet-600">
-            Pour les indépendants suisses · CHF · Export fiduciaire
+            Imaginé et créé par un indépendant qui travaille et vit en Suisse
           </div>
           <h1 className="animate-fade-in-up animate-delay-100 mb-6 text-5xl font-bold leading-tight tracking-tight text-indigo-950 md:text-7xl">
             La compta simplifiée
