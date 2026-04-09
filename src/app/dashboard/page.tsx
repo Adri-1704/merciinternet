@@ -26,6 +26,7 @@ interface Expense {
   date: string;
   createdAt: string;
   receiptId?: string;
+  tva?: number; // 0, 2.5, or 8.1
 }
 
 interface IncomePerson {
@@ -218,6 +219,9 @@ export default function Dashboard() {
   const [category, setCategory] = useState("courses");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(todayStr());
+  const [tva, setTva] = useState<number>(8.1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
   const [editingSavings, setEditingSavings] = useState(false);
   const [savingsInput, setSavingsInput] = useState("");
   const [showIncomePanel, setShowIncomePanel] = useState(false);
@@ -253,12 +257,54 @@ export default function Dashboard() {
   const [fiduciarySent, setFiduciarySent] = useState(false);
   const isIndépendant = true;
 
-  // Load data
+  // Load data + auto-fill recurring charges
   useEffect(() => {
     const data = loadBudget(monthKey);
-    // Apply global mode preference
     const globalMode = loadGlobalMode();
     data.mode = globalMode;
+
+    // Auto-fill recurring items from Prévisions if budget is empty for this month
+    const recurringAppliedKey = `mi-recurring-applied-${monthKey}`;
+    if (!localStorage.getItem(recurringAppliedKey)) {
+      try {
+        const rawRecurring = localStorage.getItem("mi-recurring");
+        if (rawRecurring) {
+          const recurring = JSON.parse(rawRecurring) as Array<{ id: string; name: string; amount: number; type: string; category: string }>;
+          const recurringExpenses = recurring.filter((r) => r.type === "expense");
+          const recurringIncomes = recurring.filter((r) => r.type === "income");
+
+          // Add recurring expenses as expenses
+          if (recurringExpenses.length > 0 && data.expenses.length === 0) {
+            const firstOfMonth = `${monthKey}-01`;
+            for (const r of recurringExpenses) {
+              data.expenses.push({
+                id: crypto.randomUUID(),
+                amount: r.amount,
+                category: r.category,
+                description: r.name,
+                date: firstOfMonth,
+                createdAt: new Date().toISOString(),
+              });
+            }
+          }
+
+          // Add recurring incomes
+          if (recurringIncomes.length > 0 && data.incomes.length === 0 && data.income === 0) {
+            for (const r of recurringIncomes) {
+              data.incomes.push({
+                id: crypto.randomUUID(),
+                name: r.name,
+                amount: r.amount,
+              });
+            }
+          }
+
+          localStorage.setItem(recurringAppliedKey, "1");
+          saveBudget(monthKey, data);
+        }
+      } catch { /* ignore */ }
+    }
+
     setBudget(data);
     setLoaded(true);
   }, [monthKey]);
@@ -318,7 +364,17 @@ export default function Dashboard() {
       : 0;
 
   // Group expenses by date
-  const grouped = budget.expenses
+  const filteredExpenses = budget.expenses.filter((exp) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const cat = getCategoryInfo(exp.category);
+      if (!exp.description.toLowerCase().includes(q) && !cat.name.toLowerCase().includes(q)) return false;
+    }
+    if (filterCategory && exp.category !== filterCategory) return false;
+    return true;
+  });
+
+  const grouped = filteredExpenses
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
     .reduce<Record<string, Expense[]>>((acc, exp) => {
@@ -371,6 +427,7 @@ export default function Dashboard() {
       description: description.trim(),
       date,
       createdAt: new Date().toISOString(),
+      tva,
     };
 
     const updatedBudget = {
@@ -718,12 +775,15 @@ export default function Dashboard() {
   function exportCSV() {
     const budgets = getExportBudgets();
     const lines: string[] = [];
-    lines.push("Mois,Type,Date,Catégorie,Description,Montant CHF");
+    lines.push("Mois,Type,Date,Catégorie,Description,Montant CHF,TVA %,Montant HT,Montant TVA");
 
     for (const { data, label } of budgets) {
       for (const exp of data.expenses) {
         const cat = getCategoryInfo(exp.category);
-        lines.push(`${label},Dépense,${exp.date},${cat.name},"${exp.description.replace(/"/g, '""')}",${exp.amount.toFixed(2)}`);
+        const tvaRate = exp.tva ?? 0;
+        const ht = tvaRate > 0 ? exp.amount / (1 + tvaRate / 100) : exp.amount;
+        const tvaAmount = exp.amount - ht;
+        lines.push(`${label},Dépense,${exp.date},${cat.name},"${exp.description.replace(/"/g, '""')}",${exp.amount.toFixed(2)},${tvaRate},${ht.toFixed(2)},${tvaAmount.toFixed(2)}`);
       }
       for (const inv of data.invoices) {
         lines.push(`${label},Facture client,${inv.date},,"${inv.clientName.replace(/"/g, '""')}",${inv.amount.toFixed(2)}`);
@@ -921,6 +981,77 @@ Envoyé depuis Merciinternet.ch`
     setFiduciarySent(true);
     setTimeout(() => setFiduciarySent(false), 3000);
     setShowExportModal(false);
+  }
+
+  // ─── Onboarding ───────────────────────────────────────────────────────────
+
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+
+  useEffect(() => {
+    if (!localStorage.getItem("mi-onboarding-done")) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  function dismissOnboarding() {
+    localStorage.setItem("mi-onboarding-done", "1");
+    setShowOnboarding(false);
+  }
+
+  const onboardingSteps = [
+    { icon: "👋", title: "Bienvenue sur Merciinternet", text: "La compta simplifiée pour les indépendants suisses. Suivez vos dépenses, scannez vos factures et envoyez le tout à votre fiduciaire." },
+    { icon: "📸", title: "Scannez vos factures", text: "Cliquez sur \"Scanner\" pour photographier un ticket ou une facture. L'IA extrait automatiquement le montant, la date et la catégorie." },
+    { icon: "📊", title: "Prévisions & charges fixes", text: "Allez dans \"Prévisions\" pour définir vos charges récurrentes (loyer, assurances...). Elles se pré-remplissent chaque mois." },
+    { icon: "📤", title: "Export fiduciaire", text: "Cliquez sur \"Export\" pour envoyer votre rapport mensuel (CSV ou PDF) directement à votre fiduciaire par email." },
+    { icon: "💾", title: "Sauvegardez vos données", text: "Vos données sont stockées localement. Pensez à faire une sauvegarde régulière via l'icône engrenage." },
+  ];
+
+  // ─── Backup functions ──────────────────────────────────────────────────────
+
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const backupFileRef = useCallback((node: HTMLInputElement | null) => {
+    if (node) {
+      node.addEventListener("change", (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const backup = JSON.parse(reader.result as string);
+            if (!backup._merciinternet_backup) { alert("Fichier invalide"); return; }
+            let count = 0;
+            for (const [key, value] of Object.entries(backup)) {
+              if (key.startsWith("mi-")) {
+                localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
+                count++;
+              }
+            }
+            alert(`Restauration réussie ! ${count} éléments importés. La page va se recharger.`);
+            window.location.reload();
+          } catch { alert("Erreur lors de la restauration"); }
+        };
+        reader.readAsText(file);
+      });
+    }
+  }, []);
+
+  function exportBackup() {
+    const backup: Record<string, unknown> = { _merciinternet_backup: true, _date: new Date().toISOString() };
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("mi-")) {
+        try { backup[key] = JSON.parse(localStorage.getItem(key)!); }
+        catch { backup[key] = localStorage.getItem(key); }
+      }
+    }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `merciinternet_backup_${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   if (!loaded) {
@@ -1310,6 +1441,16 @@ Envoyé depuis Merciinternet.ch`
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Export
+          </button>
+          <button
+            onClick={() => setShowBackupModal(true)}
+            className="flex items-center justify-center rounded-lg bg-zinc-100 p-2 text-zinc-500 transition-colors hover:bg-zinc-200"
+            title="Sauvegarde"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
           </button>
         </div>
       </div>
@@ -1817,6 +1958,18 @@ Envoyé depuis Merciinternet.ch`
                 className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600"
               />
             </div>
+            <div>
+              <label className="mb-1 block text-xs text-zinc-500">TVA</label>
+              <select
+                value={tva}
+                onChange={(e) => setTva(parseFloat(e.target.value))}
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600"
+              >
+                <option value={8.1}>8.1%</option>
+                <option value={2.5}>2.5%</option>
+                <option value={0}>0% (exonéré)</option>
+              </select>
+            </div>
           </div>
           <div className="mt-4 flex gap-3">
             <button
@@ -1844,6 +1997,32 @@ Envoyé depuis Merciinternet.ch`
           <h2 className="mb-3 text-sm font-semibold text-zinc-700">
             Dépenses ({budget.expenses.length})
           </h2>
+          {budget.expenses.length > 0 && (
+            <div className="mb-3 flex gap-2">
+              <div className="relative flex-1">
+                <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher..."
+                  className="w-full rounded-lg border border-zinc-200 py-2 pl-9 pr-3 text-sm focus:border-violet-500 focus:outline-none"
+                />
+              </div>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="rounded-lg border border-zinc-200 px-2 py-2 text-sm focus:border-violet-500 focus:outline-none"
+              >
+                <option value="">Toutes</option>
+                {ALL_CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {sortedDates.length === 0 ? (
             <div className="rounded-xl bg-white p-8 text-center text-sm text-zinc-400 shadow-sm">
               Aucune dépense ce mois-ci.
@@ -1872,7 +2051,7 @@ Envoyé depuis Merciinternet.ch`
                             <div className="text-sm font-medium text-zinc-900">
                               {exp.description || cat.name}
                             </div>
-                            <div className="text-xs text-zinc-400">{cat.name}</div>
+                            <div className="text-xs text-zinc-400">{cat.name}{exp.tva ? ` · TVA ${exp.tva}%` : ""}</div>
                           </div>
                           <div className="text-sm font-semibold text-zinc-900">
                             -{formatCHF(exp.amount)}
@@ -2080,6 +2259,72 @@ Envoyé depuis Merciinternet.ch`
                 Enregistrer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding */}
+      {showOnboarding && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6 text-center">
+            <div className="mb-4 text-5xl">{onboardingSteps[onboardingStep].icon}</div>
+            <h2 className="text-lg font-bold text-zinc-800 mb-2">{onboardingSteps[onboardingStep].title}</h2>
+            <p className="text-sm text-zinc-500 mb-6">{onboardingSteps[onboardingStep].text}</p>
+
+            {/* Progress dots */}
+            <div className="flex justify-center gap-1.5 mb-5">
+              {onboardingSteps.map((_, i) => (
+                <div key={i} className={`h-1.5 rounded-full transition-all ${i === onboardingStep ? "w-6 bg-violet-600" : "w-1.5 bg-zinc-200"}`} />
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={dismissOnboarding} className="flex-1 rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-500 hover:bg-zinc-50">
+                Passer
+              </button>
+              {onboardingStep < onboardingSteps.length - 1 ? (
+                <button onClick={() => setOnboardingStep(onboardingStep + 1)} className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">
+                  Suivant
+                </button>
+              ) : (
+                <button onClick={dismissOnboarding} className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">
+                  C&apos;est parti !
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Backup Modal */}
+      {showBackupModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setShowBackupModal(false)}>
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-zinc-800 mb-1">Sauvegarde</h2>
+            <p className="text-sm text-zinc-500 mb-5">Protégez vos données contre la perte</p>
+            <div className="space-y-3">
+              <button
+                onClick={() => { exportBackup(); setShowBackupModal(false); }}
+                className="w-full flex items-center gap-4 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4 text-left transition-colors hover:border-emerald-500"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-200 text-emerald-700 font-bold text-lg">↓</div>
+                <div>
+                  <div className="text-sm font-semibold text-emerald-800">Exporter mes données</div>
+                  <div className="text-xs text-emerald-600">Télécharger un fichier JSON avec toutes vos données</div>
+                </div>
+              </button>
+              <label className="w-full flex items-center gap-4 rounded-xl border-2 border-violet-300 bg-violet-50 p-4 text-left transition-colors hover:border-violet-500 cursor-pointer">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-200 text-violet-700 font-bold text-lg">↑</div>
+                <div>
+                  <div className="text-sm font-semibold text-violet-800">Restaurer mes données</div>
+                  <div className="text-xs text-violet-600">Importer un fichier de sauvegarde</div>
+                </div>
+                <input type="file" accept=".json" ref={backupFileRef} className="hidden" />
+              </label>
+            </div>
+            <button onClick={() => setShowBackupModal(false)} className="mt-4 w-full rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-500 hover:bg-zinc-50">
+              Fermer
+            </button>
           </div>
         </div>
       )}
