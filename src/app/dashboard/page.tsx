@@ -161,7 +161,7 @@ function todayStr(): string {
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 function defaultBudget(): BudgetData {
-  return { income: 0, incomes: [], savingsGoal: 0, expenses: [], mode: 'particulier', invoices: [], bankAccounts: [], paidBills: [], billsToPay: [] };
+  return { income: 0, incomes: [], savingsGoal: 0, expenses: [], mode: 'independant', invoices: [], bankAccounts: [], paidBills: [], billsToPay: [] };
 }
 
 function loadBudget(monthKey: string): BudgetData {
@@ -173,7 +173,7 @@ function loadBudget(monthKey: string): BudgetData {
     if (raw) {
       const data = JSON.parse(raw);
       if (!data.incomes) data.incomes = [];
-      if (!data.mode) data.mode = 'particulier';
+      if (!data.mode) data.mode = 'independant';
       if (!data.invoices) data.invoices = [];
       if (!data.bankAccounts) data.bankAccounts = [];
       if (!data.paidBills) data.paidBills = [];
@@ -188,10 +188,10 @@ function loadBudget(monthKey: string): BudgetData {
 
 // Persist mode globally so it carries across months
 function loadGlobalMode(): 'particulier' | 'independant' {
-  if (typeof window === "undefined") return 'particulier';
+  if (typeof window === "undefined") return 'independant';
   try {
-    return (localStorage.getItem('mi-mode') as 'particulier' | 'independant') || 'particulier';
-  } catch { return 'particulier'; }
+    return (localStorage.getItem('mi-mode') as 'particulier' | 'independant') || 'independant';
+  } catch { return 'independant'; }
 }
 
 function saveGlobalMode(mode: 'particulier' | 'independant') {
@@ -250,7 +250,7 @@ export default function Dashboard() {
   const [fiduciaryName, setFiduciaryName] = useState("");
   const [showFiduciarySettings, setShowFiduciarySettings] = useState(false);
   const [fiduciarySent, setFiduciarySent] = useState(false);
-  const isIndépendant = budget.mode === 'independant';
+  const isIndépendant = true;
 
   // Load data
   useEffect(() => {
@@ -504,12 +504,6 @@ export default function Dashboard() {
   function openScanner(target: 'expense' | 'paidBill' | 'billToPay') {
     setScannerTarget(target);
     setShowScanner(true);
-  }
-
-  function toggleMode() {
-    const newMode = budget.mode === 'particulier' ? 'independant' : 'particulier';
-    saveGlobalMode(newMode);
-    persist({ ...budget, mode: newMode });
   }
 
   function addInvoice() {
@@ -1251,24 +1245,8 @@ Envoyé depuis Merciinternet.ch`
         </div>
       </header>
 
-      {/* Mode Toggle */}
+      {/* Mobile buttons */}
       <div className="mx-auto max-w-lg sm:max-w-none px-4 pt-3 pb-1">
-        <div className="flex items-center justify-center">
-          <div className="inline-flex rounded-full bg-zinc-100 p-0.5 text-xs font-medium">
-            <button
-              onClick={() => budget.mode !== 'particulier' && toggleMode()}
-              className={`rounded-full px-3 py-1 transition-colors ${budget.mode === 'particulier' ? 'bg-violet-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
-            >
-              Particulier
-            </button>
-            <button
-              onClick={() => budget.mode !== 'independant' && toggleMode()}
-              className={`rounded-full px-3 py-1 transition-colors ${budget.mode === 'independant' ? 'bg-violet-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
-            >
-              Indépendant
-            </button>
-          </div>
-        </div>
         {/* Mobile buttons: Prévisions + Factures + Export */}
         <div className="flex gap-2 mt-2 sm:hidden">
           <Link

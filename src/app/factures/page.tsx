@@ -43,8 +43,6 @@ const CATEGORIES = [
   { id: "soustraitance", icon: "🤝", name: "Sous-traitance" },
 ] as const;
 
-const PRO_CATEGORY_IDS = ["materiel", "logiciel", "comptable", "bureau", "deplacement", "formation", "marketing", "soustraitance"];
-
 function getCategoryInfo(id: string) {
   return CATEGORIES.find((c) => c.id === id) || { id: "autre", icon: "📦", name: "Autre" };
 }
@@ -68,7 +66,6 @@ function formatDate(dateStr: string): string {
 export default function Factures() {
   const [entries, setEntries] = useState<ReceiptEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState<"particulier" | "independant">("particulier");
   const [viewerImage, setViewerImage] = useState<string | null>(null);
 
   // Scan all months in localStorage for entries with receiptId
@@ -146,17 +143,9 @@ export default function Factures() {
     setLoaded(true);
   }, []);
 
-  function isProEntry(entry: ReceiptEntry): boolean {
-    return PRO_CATEGORY_IDS.includes(entry.category) || entry.type === "paidBill" || entry.type === "billToPay";
-  }
-
-  const particulierEntries = entries.filter((e) => !isProEntry(e));
-  const independantEntries = entries.filter((e) => isProEntry(e));
-  const displayedEntries = activeTab === "particulier" ? particulierEntries : independantEntries;
-
   // Group by month
   const grouped: Record<string, ReceiptEntry[]> = {};
-  for (const entry of displayedEntries) {
+  for (const entry of entries) {
     const [year, month] = entry.monthKey.split("-");
     const label = `${MONTH_NAMES[parseInt(month) - 1]} ${year}`;
     if (!grouped[label]) grouped[label] = [];
@@ -197,35 +186,9 @@ export default function Factures() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="mx-auto max-w-lg sm:max-w-none px-4 pt-3">
-        <div className="flex rounded-xl bg-white p-1 shadow-sm border border-zinc-100">
-          <button
-            onClick={() => setActiveTab("particulier")}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
-              activeTab === "particulier"
-                ? "bg-violet-600 text-white shadow-sm"
-                : "text-zinc-500 hover:text-zinc-700"
-            }`}
-          >
-            Particulier ({particulierEntries.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("independant")}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
-              activeTab === "independant"
-                ? "bg-violet-600 text-white shadow-sm"
-                : "text-zinc-500 hover:text-zinc-700"
-            }`}
-          >
-            Indépendant ({independantEntries.length})
-          </button>
-        </div>
-      </div>
-
       {/* Content */}
       <div className="mx-auto max-w-lg sm:max-w-none px-4 pt-4 space-y-4">
-        {displayedEntries.length === 0 ? (
+        {entries.length === 0 ? (
           <div className="rounded-2xl bg-white p-8 shadow-sm border border-zinc-100 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100">
               <svg className="h-8 w-8 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

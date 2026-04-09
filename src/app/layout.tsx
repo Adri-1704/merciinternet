@@ -13,26 +13,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Merciinternet.ch — Gérez votre budget pour le prix d'un verre de blanc",
+  title: "Merciinternet.ch — La compta simplifiée pour les indépendants suisses",
   description:
-    "L'app de gestion de budget pensée pour la Suisse. Saisie rapide des dépenses, catégories suisses (LAMal, 3e pilier, impôts, CFF...), objectifs d'épargne, vue mensuelle. En francs suisses.",
+    "L'app de comptabilité pensée pour les indépendants suisses. Scan de factures, export fiduciaire, suivi des dépenses et revenus en CHF. Simple, rapide, tout-en-un.",
   keywords: [
-    "budget",
+    "comptabilité",
+    "indépendant",
+    "freelance",
     "suisse",
-    "gestion budget",
-    "finances personnelles",
+    "fiduciaire",
+    "factures",
     "CHF",
-    "épargne",
     "dépenses",
-    "LAMal",
-    "3e pilier",
-    "impôts",
-    "app budget suisse",
+    "scan facture",
+    "export comptable",
+    "gestion indépendant suisse",
   ],
   openGraph: {
-    title: "Merciinternet.ch — Gérez votre budget pour le prix d'un verre de blanc",
+    title: "Merciinternet.ch — La compta simplifiée pour les indépendants suisses",
     description:
-      "L'app de budget pensée pour la Suisse. Simple, rapide, en francs suisses.",
+      "Scan de factures, export fiduciaire, suivi des dépenses. L'app pensée pour les indépendants suisses.",
     url: "https://merciinternet.ch",
     siteName: "Merciinternet.ch",
     locale: "fr_CH",
@@ -40,9 +40,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Merciinternet.ch — Gérez votre budget pour le prix d'un verre de blanc",
+    title: "Merciinternet.ch — La compta simplifiée pour les indépendants suisses",
     description:
-      "L'app de budget pensée pour la Suisse. Simple, rapide, en francs suisses.",
+      "Scan de factures, export fiduciaire, suivi des dépenses. L'app pensée pour les indépendants suisses.",
   },
 };
 

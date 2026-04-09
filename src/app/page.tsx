@@ -2,81 +2,82 @@ import Link from "next/link";
 
 const features = [
   {
-    icon: "🇨🇭",
-    title: "Pensé pour la Suisse",
-    description:
-      "Catégories suisses intégrées : LAMal, 3e pilier, impôts, Serafe, CFF, Coop, Migros... Tout est déjà là.",
-  },
-  {
-    icon: "⚡",
-    title: "Simple et rapide",
-    description:
-      "Ajoutez une dépense en 3 secondes. Interface claire, pas de menus compliqués.",
-  },
-  {
-    icon: "📊",
-    title: "Vue claire",
-    description:
-      "Budget mensuel, ce qu'il vous reste, projection fin de mois. Tout en un coup d'œil.",
-  },
-  {
-    icon: "🎯",
-    title: "Objectifs d'épargne",
-    description:
-      "Vacances, 3e pilier, achat immobilier... Définissez vos objectifs et suivez votre progression.",
-  },
-  {
     icon: "📸",
-    title: "Scan de tickets",
+    title: "Scan de factures IA",
     description:
-      "Photographiez votre ticket de caisse et les dépenses sont ajoutées automatiquement grâce à l'IA.",
+      "Photographiez vos tickets et factures. Le montant, la date et la catégorie sont extraits automatiquement.",
+  },
+  {
+    icon: "📤",
+    title: "Export fiduciaire",
+    description:
+      "Envoyez votre rapport mensuel (CSV ou PDF) directement à votre fiduciaire en un clic.",
+  },
+  {
+    icon: "🇨🇭",
+    title: "100% Suisse",
+    description:
+      "Catégories suisses intégrées : LAMal, 3e pilier, impôts, Serafe, matériel, sous-traitance...",
   },
   {
     icon: "💼",
-    title: "Mode Indépendant",
+    title: "Factures clients",
     description:
-      "Gérez vos factures clients, suivez vos encaissements et vos dépenses professionnelles.",
+      "Gérez vos factures clients, suivez vos encaissements et séparez trésorerie perso et pro.",
+  },
+  {
+    icon: "📊",
+    title: "Prévisions annuelles",
+    description:
+      "Charges fixes, graphique annuel, projection de trésorerie. Anticipez votre année.",
+  },
+  {
+    icon: "🗂️",
+    title: "Archivage factures",
+    description:
+      "Toutes vos factures scannées sont stockées et consultables à tout moment depuis l'app.",
   },
 ];
 
 const categories = [
-  { icon: "🏠", name: "Loyer" },
+  { icon: "🏠", name: "Loyer / Bureau" },
   { icon: "🏥", name: "Caisse maladie" },
   { icon: "🏦", name: "3e pilier" },
   { icon: "📋", name: "Impôts" },
-  { icon: "🛒", name: "Courses" },
-  { icon: "🚂", name: "Transport" },
-  { icon: "📱", name: "Téléphone" },
+  { icon: "💻", name: "Matériel" },
+  { icon: "🖥️", name: "Logiciel / Abo" },
+  { icon: "📊", name: "Comptable" },
+  { icon: "🚗", name: "Déplacements" },
+  { icon: "📚", name: "Formation" },
+  { icon: "📣", name: "Marketing" },
+  { icon: "🤝", name: "Sous-traitance" },
   { icon: "🛡️", name: "Assurances" },
   { icon: "🍽️", name: "Restaurants" },
-  { icon: "🎉", name: "Loisirs" },
-  { icon: "👕", name: "Vêtements" },
-  { icon: "💰", name: "Épargne" },
-  { icon: "⚖️", name: "Poursuites" },
-  { icon: "📝", name: "Arrangements" },
+  { icon: "📱", name: "Téléphone" },
+  { icon: "🚂", name: "Transport" },
   { icon: "📦", name: "Autre" },
 ];
 
 const faqs = [
   {
-    q: "Merciinternet est-il vraiment gratuit ?",
-    a: "Oui ! La version gratuite vous donne accès au budget mensuel, aux catégories suisses et à un compte. La version Premium débloque les multi-comptes, les objectifs d'épargne et l'export PDF.",
+    q: "C'est pour quel type d'indépendant ?",
+    a: "Merciinternet est conçu pour tous les indépendants suisses : freelances, consultants, artisans, thérapeutes, coaches, créateurs... Toute personne qui doit suivre ses dépenses et revenus pour sa fiduciaire.",
   },
   {
     q: "Mes données sont-elles sécurisées ?",
     a: "Vos données restent sur votre appareil (stockage local). Aucune donnée n'est envoyée à des tiers. Votre vie privée est notre priorité.",
   },
   {
-    q: "Pourquoi une app de budget spécifique à la Suisse ?",
-    a: "Les apps internationales ne comprennent pas les spécificités suisses : LAMal, 3e pilier, Serafe, impôts cantonaux... Merciinternet est conçu par des Suisses, pour des Suisses.",
+    q: "Comment fonctionne l'envoi à la fiduciaire ?",
+    a: "Configurez l'email de votre fiduciaire une seule fois. Chaque mois, un clic génère le rapport CSV et ouvre un email pré-rempli avec le résumé. Vous n'avez plus qu'à envoyer.",
   },
   {
-    q: "Puis-je utiliser Merciinternet en euros aussi ?",
-    a: "La version gratuite fonctionne en CHF. La version Premium permet de gérer plusieurs devises (CHF et EUR), idéal pour les frontaliers.",
+    q: "Le scan de factures est-il fiable ?",
+    a: "Le scan utilise l'IA Claude d'Anthropic pour extraire automatiquement le montant, la date et la catégorie. Vous pouvez toujours corriger avant d'ajouter.",
   },
   {
-    q: "Comment fonctionne la version Premium ?",
-    a: "Pour 4.90 CHF/mois ou 49 CHF/an, vous débloquez : multi-comptes, objectifs d'épargne, export PDF, statistiques détaillées et multi-devises CHF/EUR.",
+    q: "Puis-je essayer avant de payer ?",
+    a: "Oui, l'essai est gratuit avec des fonctionnalités de base. L'abonnement Pro débloque le scan illimité, l'export fiduciaire et l'archivage des factures.",
   },
 ];
 
@@ -110,30 +111,29 @@ export default function Home() {
 
         <div className="relative mx-auto max-w-4xl">
           <div className="animate-fade-in-up mb-6 inline-block rounded-full border border-violet-200 bg-violet-50 px-4 py-1.5 text-sm text-violet-600">
-            Particuliers & Indépendants · 100% Suisse · CHF
+            Pour les indépendants suisses · CHF · Export fiduciaire
           </div>
           <h1 className="animate-fade-in-up animate-delay-100 mb-6 text-5xl font-bold leading-tight tracking-tight text-indigo-950 md:text-7xl">
-            Gérez votre budget
+            La compta simplifiée
             <br />
-            <span className="gradient-text-violet">pour le prix d&apos;un verre de blanc</span>
+            <span className="gradient-text-violet">pour les indépendants suisses</span>
           </h1>
           <p className="animate-fade-in-up animate-delay-200 mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl">
-            L&apos;app de budget pensée pour la Suisse. Pour les particuliers
-            et les indépendants. Catégories suisses, scan de tickets, gestion
-            des factures clients.
+            Scannez vos factures, suivez vos dépenses et revenus, envoyez
+            votre rapport mensuel à votre fiduciaire. Tout en CHF, tout en un clic.
           </p>
           <div className="animate-fade-in-up animate-delay-300 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link
               href="/dashboard"
               className="w-full rounded-full bg-violet-600 px-8 py-3.5 text-base font-semibold text-white transition-all hover:bg-violet-700 hover:shadow-lg hover:shadow-violet-600/25 sm:w-auto"
             >
-              Commencer gratuitement
+              Essayer gratuitement
             </Link>
             <a
-              href="#features"
+              href="#pricing"
               className="w-full rounded-full border border-violet-200 px-8 py-3.5 text-base font-semibold text-indigo-950 transition-colors hover:bg-violet-50 sm:w-auto"
             >
-              En savoir plus
+              Voir les tarifs
             </a>
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function Home() {
             Pourquoi <span className="text-violet-600">Merciinternet</span> ?
           </h2>
           <p className="mx-auto mb-16 max-w-2xl text-center text-gray-600">
-            Une app de budget qui comprend vraiment la vie en Suisse.
+            Tout ce dont un indépendant suisse a besoin pour sa comptabilité.
           </p>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {features.map((f) => (
@@ -186,10 +186,10 @@ export default function Home() {
       <section className="px-6 py-24">
         <div className="mx-auto max-w-6xl">
           <h2 className="mb-4 text-center text-3xl font-bold text-indigo-950 md:text-4xl">
-            Catégories <span className="text-violet-600">suisses</span>
+            Catégories <span className="text-violet-600">pro & perso</span>
           </h2>
           <p className="mx-auto mb-16 max-w-2xl text-center text-gray-600">
-            Toutes les catégories dont vous avez besoin, déjà prêtes.
+            Catégories suisses et professionnelles, déjà configurées.
           </p>
           <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {categories.map((c) => (
@@ -208,84 +208,38 @@ export default function Home() {
       </section>
 
       {/* Pricing */}
-      <section className="bg-violet-50/50 px-6 py-24">
+      <section id="pricing" className="bg-violet-50/50 px-6 py-24">
         <div className="mx-auto max-w-6xl">
           <h2 className="mb-4 text-center text-3xl font-bold text-indigo-950 md:text-4xl">
-            Tarifs <span className="text-violet-600">simples</span>
+            Tarifs <span className="text-violet-600">transparents</span>
           </h2>
           <p className="mx-auto mb-16 max-w-2xl text-center text-gray-600">
-            Commencez gratuitement, passez en Premium quand vous voulez.
+            Un seul plan, tout inclus. Essayez gratuitement, sans engagement.
           </p>
           <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-2">
-            {/* Free */}
+            {/* Monthly */}
             <div className="light-card rounded-2xl p-8">
-              <div className="mb-1 text-sm font-medium uppercase tracking-wider text-gray-500">
-                Gratuit
-              </div>
-              <div className="mb-6 flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-indigo-950">0</span>
-                <span className="text-lg text-gray-500">CHF</span>
-              </div>
-              <ul className="mb-8 space-y-3">
-                {[
-                  "1 compte budget",
-                  "Budget mensuel",
-                  "Catégories suisses",
-                  "Saisie rapide des dépenses",
-                  "Vue mensuelle",
-                ].map((item) => (
-                  <li
-                    key={item}
-                    className="flex items-center gap-3 text-sm text-gray-600"
-                  >
-                    <svg
-                      className="h-4 w-4 shrink-0 text-green-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/dashboard"
-                className="block w-full rounded-full border border-violet-200 py-3 text-center text-sm font-semibold text-indigo-950 transition-colors hover:bg-violet-50"
-              >
-                Commencer gratuitement
-              </Link>
-            </div>
-
-            {/* Premium */}
-            <div className="relative rounded-2xl border border-violet-300 bg-gradient-to-b from-violet-50 to-white p-8">
-              <div className="absolute -top-3 right-6 rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold text-white">
-                Populaire
-              </div>
               <div className="mb-1 text-sm font-medium uppercase tracking-wider text-violet-600">
-                Premium
+                Mensuel
               </div>
               <div className="mb-1 flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-indigo-950">4.90</span>
+                <span className="text-4xl font-bold text-indigo-950">19.95</span>
                 <span className="text-lg text-gray-500">CHF/mois</span>
               </div>
               <div className="mb-6 text-sm text-gray-400">
-                ou 49 CHF/an (2 mois offerts)
+                Sans engagement, annulable à tout moment
               </div>
               <ul className="mb-8 space-y-3">
                 {[
-                  "Tout du plan Gratuit",
-                  "Multi-comptes",
-                  "Objectifs d'épargne",
-                  "Export PDF",
-                  "Statistiques détaillées",
-                  "Multi-devises CHF/EUR",
+                  "Suivi dépenses & revenus",
+                  "Scan de factures illimité (IA)",
+                  "Export CSV & PDF fiduciaire",
+                  "Envoi mensuel à la fiduciaire",
+                  "Archivage des factures",
+                  "Trésorerie perso & pro",
+                  "Factures clients & à payer",
+                  "Prévisions annuelles",
+                  "Catégories suisses & pro",
                 ].map((item) => (
                   <li
                     key={item}
@@ -308,9 +262,68 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <button className="block w-full rounded-full bg-violet-600 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-violet-700">
-                Bientôt disponible
-              </button>
+              <Link
+                href="/dashboard"
+                className="block w-full rounded-full bg-violet-600 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-violet-700"
+              >
+                Essayer gratuitement
+              </Link>
+            </div>
+
+            {/* Annual */}
+            <div className="relative rounded-2xl border border-violet-300 bg-gradient-to-b from-violet-50 to-white p-8">
+              <div className="absolute -top-3 right-6 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
+                2 mois offerts
+              </div>
+              <div className="mb-1 text-sm font-medium uppercase tracking-wider text-violet-600">
+                Annuel
+              </div>
+              <div className="mb-1 flex items-baseline gap-1">
+                <span className="text-4xl font-bold text-indigo-950">199</span>
+                <span className="text-lg text-gray-500">CHF/an</span>
+              </div>
+              <div className="mb-6 text-sm text-gray-400">
+                soit 16.58 CHF/mois au lieu de 19.95
+              </div>
+              <ul className="mb-8 space-y-3">
+                {[
+                  "Tout inclus (identique au mensuel)",
+                  "Scan de factures illimité (IA)",
+                  "Export CSV & PDF fiduciaire",
+                  "Envoi mensuel à la fiduciaire",
+                  "Archivage des factures",
+                  "Trésorerie perso & pro",
+                  "Factures clients & à payer",
+                  "Prévisions annuelles",
+                  "Support prioritaire",
+                ].map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-center gap-3 text-sm text-gray-600"
+                  >
+                    <svg
+                      className="h-4 w-4 shrink-0 text-violet-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/dashboard"
+                className="block w-full rounded-full bg-violet-600 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-violet-700"
+              >
+                Essayer gratuitement
+              </Link>
             </div>
           </div>
         </div>
@@ -363,19 +376,19 @@ export default function Home() {
         <div className="mx-auto max-w-4xl">
           <div className="rounded-3xl bg-gradient-to-br from-violet-600 to-indigo-600 px-8 py-16 text-center">
             <h2 className="mb-6 text-3xl font-bold text-white md:text-5xl">
-              Prêt à reprendre le contrôle
+              Simplifiez votre compta
               <br />
-              de vos finances ?
+              dès aujourd&apos;hui
             </h2>
             <p className="mx-auto mb-10 max-w-xl text-violet-100">
-              Rejoignez Merciinternet et commencez à gérer votre budget en francs
-              suisses, avec des catégories qui vous parlent.
+              Rejoignez les indépendants suisses qui gèrent leur comptabilité
+              en quelques clics. Votre fiduciaire vous remerciera.
             </p>
             <Link
               href="/dashboard"
               className="inline-block rounded-full bg-white px-10 py-4 text-base font-semibold text-violet-600 transition-all hover:bg-violet-50 hover:shadow-lg"
             >
-              Commencer gratuitement
+              Essayer gratuitement
             </Link>
           </div>
         </div>
