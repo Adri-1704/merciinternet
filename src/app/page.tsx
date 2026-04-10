@@ -391,7 +391,7 @@ export default function Home() {
               <div className="flex flex-wrap gap-3">
                 <span className="rounded-full bg-violet-100 px-4 py-1.5 text-sm font-medium text-violet-700">Indépendant en Suisse</span>
                 <span className="rounded-full bg-violet-100 px-4 py-1.5 text-sm font-medium text-violet-700">Le Bouveret, Valais</span>
-                <span className="rounded-full bg-violet-100 px-4 py-1.5 text-sm font-medium text-violet-700">Entrepreneur depuis 2017</span>
+                <span className="rounded-full bg-violet-100 px-4 py-1.5 text-sm font-medium text-violet-700">Indépendant depuis +20 ans</span>
               </div>
             </div>
           </div>
