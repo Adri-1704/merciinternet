@@ -82,6 +82,7 @@ export default function Facturation() {
   const [notes, setNotes] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
+  const [docType, setDocType] = useState<"invoice" | "quote">("invoice");
 
   // Client form
   const [clientForm, setClientForm] = useState({ name: "", company: "", email: "", phone: "", address: "", city: "", postal_code: "" });
@@ -141,13 +142,20 @@ export default function Facturation() {
 
   async function createInvoice() {
     if (!user || items.length === 0) return;
-    const invNumber = settings?.next_invoice_number || 1;
-    const invoiceNumber = `F-${String(invNumber).padStart(4, "0")}`;
+
+    let docNumber: string;
+    if (docType === "quote") {
+      const quoteCount = invoices.filter((i) => i.invoice_number.startsWith("D-")).length;
+      docNumber = `D-${String(quoteCount + 1).padStart(4, "0")}`;
+    } else {
+      const invNumber = settings?.next_invoice_number || 1;
+      docNumber = `F-${String(invNumber).padStart(4, "0")}`;
+    }
 
     await supabase.from("mi_invoices").insert({
       user_id: user.id,
       client_id: selectedClientId || null,
-      invoice_number: invoiceNumber,
+      invoice_number: docNumber,
       status: "draft",
       issue_date: issueDate,
       due_date: dueDate || null,
@@ -161,11 +169,14 @@ export default function Facturation() {
       sender_email: settings?.email || "",
     });
 
-    // Increment invoice number
-    await supabase.from("mi_user_settings").upsert({
-      user_id: user.id,
-      next_invoice_number: invNumber + 1,
-    });
+    // Increment invoice number only for invoices
+    if (docType === "invoice") {
+      const invNumber = settings?.next_invoice_number || 1;
+      await supabase.from("mi_user_settings").upsert({
+        user_id: user.id,
+        next_invoice_number: invNumber + 1,
+      });
+    }
 
     setItems([{ description: "", quantity: 1, unit_price: 0, tva_rate: 8.1 }]);
     setNotes("");
@@ -452,6 +463,15 @@ export default function Facturation() {
     finally { setSending(null); }
   }
 
+  async function convertToInvoice(id: string) {
+    if (!user) return;
+    const invNumber = settings?.next_invoice_number || 1;
+    const invoiceNumber = `F-${String(invNumber).padStart(4, "0")}`;
+    await supabase.from("mi_invoices").update({ invoice_number: invoiceNumber }).eq("id", id);
+    await supabase.from("mi_user_settings").upsert({ user_id: user.id, next_invoice_number: invNumber + 1 });
+    loadData();
+  }
+
   async function deleteInvoice(id: string) {
     await supabase.from("mi_invoices").delete().eq("id", id);
     loadData();
@@ -531,7 +551,7 @@ export default function Facturation() {
       <div className="mx-auto max-w-4xl px-4 pt-3">
         <div className="flex rounded-xl bg-white p-1 shadow-sm border border-zinc-100">
           {[
-            { key: "list" as const, label: `Factures (${invoices.length})` },
+            { key: "list" as const, label: `Documents (${invoices.length})` },
             { key: "create" as const, label: "+ Nouvelle" },
             { key: "clients" as const, label: `Clients (${clients.length})` },
           ].map((tab) => (
@@ -566,7 +586,10 @@ export default function Facturation() {
                 return (
                   <div key={inv.id} className="rounded-xl bg-white p-4 shadow-sm border border-zinc-100">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {inv.invoice_number.startsWith("D-") && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Devis</span>
+                        )}
                         <span className="text-sm font-bold text-zinc-800">{inv.invoice_number}</span>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.color}`}>{st.label}</span>
                       </div>
@@ -591,6 +614,9 @@ export default function Facturation() {
                         {inv.status === "sent" && (
                           <button onClick={() => updateStatus(inv.id, "paid")} className="rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-100">Payée</button>
                         )}
+                        {inv.invoice_number.startsWith("D-") && (
+                          <button onClick={() => convertToInvoice(inv.id)} className="rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-700 hover:bg-amber-100">→ Facture</button>
+                        )}
                         <button onClick={() => duplicateInvoice(inv.id)} className="rounded-lg bg-zinc-50 px-2 py-1 text-[10px] font-medium text-zinc-600 hover:bg-zinc-100">Dupliquer</button>
                         <button onClick={() => deleteInvoice(inv.id)} className="rounded-lg bg-red-50 px-2 py-1 text-[10px] font-medium text-red-500 hover:bg-red-100">Suppr.</button>
                       </div>
@@ -611,6 +637,22 @@ export default function Facturation() {
                 <button onClick={() => setView("settings")} className="mt-2 text-sm font-semibold text-amber-700 underline">Configurer</button>
               </div>
             )}
+
+            {/* Type: Facture / Devis */}
+            <div className="flex rounded-xl bg-white p-1 shadow-sm border border-zinc-100">
+              <button
+                onClick={() => setDocType("invoice")}
+                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${docType === "invoice" ? "bg-violet-600 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}
+              >
+                Facture
+              </button>
+              <button
+                onClick={() => setDocType("quote")}
+                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${docType === "quote" ? "bg-amber-500 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}
+              >
+                Devis
+              </button>
+            </div>
 
             {/* Client */}
             <div className="rounded-xl bg-white p-4 shadow-sm">
@@ -720,7 +762,7 @@ export default function Facturation() {
               disabled={items.every((i) => !i.description || i.unit_price === 0)}
               className="w-full rounded-lg bg-violet-600 py-3 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
             >
-              Créer la facture
+              {docType === "quote" ? "Créer le devis" : "Créer la facture"}
             </button>
           </div>
         )}
