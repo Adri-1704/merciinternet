@@ -1396,6 +1396,16 @@ Envoyé depuis Merciinternet.ch`
               </svg>
               Factures
             </Link>
+            <Link
+              href="/facturation"
+              className="hidden sm:flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+              title="Facturation"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Facturer
+            </Link>
             <button
               onClick={() => { setExportMonths([monthKey]); setShowExportModal(true); }}
               className="hidden sm:flex items-center gap-1.5 rounded-lg border-2 border-violet-600 px-3 py-1.5 text-xs font-semibold text-violet-600 transition-colors hover:bg-violet-50"
@@ -1442,6 +1452,15 @@ Envoyé depuis Merciinternet.ch`
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
             </svg>
             Factures
+          </Link>
+          <Link
+            href="/facturation"
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Facturer
           </Link>
           <button
             onClick={() => { setExportMonths([monthKey]); setShowExportModal(true); }}
