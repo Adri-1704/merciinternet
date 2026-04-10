@@ -178,6 +178,30 @@ export default function Facturation() {
     loadData();
   }
 
+  function viewPDF(id: string) {
+    window.open(`/api/invoice/pdf?id=${id}`, "_blank");
+  }
+
+  const [sending, setSending] = useState<string | null>(null);
+
+  async function sendInvoice(id: string) {
+    setSending(id);
+    try {
+      const res = await fetch("/api/invoice/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) alert(data.error || "Erreur d'envoi");
+      else {
+        alert("Facture envoyée par email !");
+        loadData();
+      }
+    } catch { alert("Erreur de connexion"); }
+    finally { setSending(null); }
+  }
+
   async function deleteInvoice(id: string) {
     await supabase.from("mi_invoices").delete().eq("id", id);
     loadData();
@@ -271,14 +295,20 @@ export default function Facturation() {
                         <p className="text-xs text-zinc-500">{clientName}</p>
                         <p className="text-[10px] text-zinc-400">{inv.issue_date}</p>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-wrap justify-end">
+                        <button onClick={() => viewPDF(inv.id)} className="rounded-lg bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-600 hover:bg-violet-100">PDF</button>
+                        {inv.status === "draft" && inv.client_id && (
+                          <button onClick={() => sendInvoice(inv.id)} disabled={sending === inv.id} className="rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-600 hover:bg-blue-100 disabled:opacity-50">
+                            {sending === inv.id ? "Envoi..." : "Envoyer"}
+                          </button>
+                        )}
                         {inv.status === "draft" && (
-                          <button onClick={() => updateStatus(inv.id, "sent")} className="rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-600 hover:bg-blue-100">Marquer envoyée</button>
+                          <button onClick={() => updateStatus(inv.id, "sent")} className="rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-600 hover:bg-blue-100">Envoyée</button>
                         )}
                         {inv.status === "sent" && (
-                          <button onClick={() => updateStatus(inv.id, "paid")} className="rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-100">Marquer payée</button>
+                          <button onClick={() => updateStatus(inv.id, "paid")} className="rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-100">Payée</button>
                         )}
-                        <button onClick={() => deleteInvoice(inv.id)} className="rounded-lg bg-red-50 px-2 py-1 text-[10px] font-medium text-red-500 hover:bg-red-100">Supprimer</button>
+                        <button onClick={() => deleteInvoice(inv.id)} className="rounded-lg bg-red-50 px-2 py-1 text-[10px] font-medium text-red-500 hover:bg-red-100">Suppr.</button>
                       </div>
                     </div>
                   </div>
