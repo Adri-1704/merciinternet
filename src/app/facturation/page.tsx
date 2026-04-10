@@ -182,14 +182,16 @@ export default function Facturation() {
     window.open(`/api/invoice/pdf?id=${id}`, "_blank");
   }
 
-  function downloadPDF(id: string, invoiceNumber: string) {
-    const w = window.open(`/api/invoice/pdf?id=${id}`, "_blank");
-    if (w) {
-      w.onload = () => {
-        w.document.title = `Facture_${invoiceNumber}`;
-        setTimeout(() => w.print(), 500);
-      };
-    }
+  async function downloadPDF(id: string, invoiceNumber: string) {
+    const res = await fetch(`/api/invoice/pdf?id=${id}`);
+    const html = await res.text();
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Facture_${invoiceNumber}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   const [sending, setSending] = useState<string | null>(null);
