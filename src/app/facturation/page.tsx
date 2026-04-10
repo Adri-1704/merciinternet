@@ -605,11 +605,8 @@ export default function Facturation() {
                         <button onClick={() => downloadPDF(inv.id, inv.invoice_number)} className="rounded-lg bg-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-600 hover:bg-zinc-200">Télécharger</button>
                         {inv.status === "draft" && inv.client_id && (
                           <button onClick={() => sendInvoice(inv.id)} disabled={sending === inv.id} className="rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-600 hover:bg-blue-100 disabled:opacity-50">
-                            {sending === inv.id ? "Envoi..." : "Envoyer"}
+                            {sending === inv.id ? "Envoi..." : "📧 Envoyer"}
                           </button>
-                        )}
-                        {inv.status === "draft" && (
-                          <button onClick={() => updateStatus(inv.id, "sent")} className="rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-600 hover:bg-blue-100">Envoyée</button>
                         )}
                         {inv.status === "sent" && (
                           <button onClick={() => updateStatus(inv.id, "paid")} className="rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-100">Payée</button>
