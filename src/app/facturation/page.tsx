@@ -457,6 +457,38 @@ export default function Facturation() {
     loadData();
   }
 
+  async function duplicateInvoice(id: string) {
+    if (!user) return;
+    const inv = invoices.find((i) => i.id === id);
+    if (!inv) return;
+    const invNumber = settings?.next_invoice_number || (invoices.length + 1);
+    const invoiceNumber = `F-${String(invNumber).padStart(4, "0")}`;
+
+    await supabase.from("mi_invoices").insert({
+      user_id: user.id,
+      client_id: inv.client_id,
+      invoice_number: invoiceNumber,
+      status: "draft",
+      issue_date: new Date().toISOString().split("T")[0],
+      due_date: inv.due_date,
+      items: inv.items,
+      subtotal: inv.subtotal,
+      tva_rate: inv.tva_rate,
+      tva_amount: inv.tva_amount,
+      total: inv.total,
+      notes: inv.notes,
+      sender_name: inv.sender_name,
+      sender_email: inv.sender_email,
+    });
+
+    await supabase.from("mi_user_settings").upsert({
+      user_id: user.id,
+      next_invoice_number: invNumber + 1,
+    });
+
+    loadData();
+  }
+
   function addItem() {
     setItems([...items, { description: "", quantity: 1, unit_price: 0, tva_rate: 8.1 }]);
   }
@@ -559,6 +591,7 @@ export default function Facturation() {
                         {inv.status === "sent" && (
                           <button onClick={() => updateStatus(inv.id, "paid")} className="rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-100">Payée</button>
                         )}
+                        <button onClick={() => duplicateInvoice(inv.id)} className="rounded-lg bg-zinc-50 px-2 py-1 text-[10px] font-medium text-zinc-600 hover:bg-zinc-100">Dupliquer</button>
                         <button onClick={() => deleteInvoice(inv.id)} className="rounded-lg bg-red-50 px-2 py-1 text-[10px] font-medium text-red-500 hover:bg-red-100">Suppr.</button>
                       </div>
                     </div>
