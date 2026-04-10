@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -16,6 +17,7 @@ export default function Signup() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 6) { setError("Le mot de passe doit faire au moins 6 caractères"); return; }
+    if (password !== confirmPassword) { setError("Les mots de passe ne correspondent pas"); return; }
     setLoading(true);
     setError("");
     const supabase = createClient();
@@ -86,6 +88,18 @@ export default function Signup() {
               minLength={6}
               className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-base focus:border-violet-500 focus:outline-none"
               placeholder="6 caractères minimum"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-500">Confirmer le mot de passe</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={6}
+              className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-base focus:border-violet-500 focus:outline-none"
+              placeholder="Retapez votre mot de passe"
             />
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
