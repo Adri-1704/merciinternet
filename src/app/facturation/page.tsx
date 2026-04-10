@@ -183,15 +183,117 @@ export default function Facturation() {
   }
 
   async function downloadPDF(id: string, invoiceNumber: string) {
-    const res = await fetch(`/api/invoice/pdf?id=${id}`);
-    const html = await res.text();
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Facture_${invoiceNumber}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const { jsPDF } = await import("jspdf");
+    const inv = invoices.find((i) => i.id === id);
+    if (!inv) return;
+
+    const client = inv.mi_clients;
+    const items = (inv.items || []) as InvoiceItem[];
+    const doc = new jsPDF();
+    const w = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(124, 58, 237);
+    doc.text(settings?.company_name || "Merciinternet", 14, y);
+    doc.setFontSize(22);
+    doc.setTextColor(26, 26, 46);
+    doc.text(inv.invoice_number, w - 14, y, { align: "right" });
+    y += 10;
+
+    // Sender info
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    if (settings?.address) { doc.text(settings.address, 14, y); y += 4; }
+    if (settings?.postal_code || settings?.city) { doc.text(`${settings?.postal_code || ""} ${settings?.city || ""}`, 14, y); y += 4; }
+    if (settings?.email) { doc.text(settings.email, 14, y); y += 4; }
+    if (settings?.phone) { doc.text(settings.phone, 14, y); y += 4; }
+
+    // Invoice info right side
+    let yr = 30;
+    doc.text(`Date : ${inv.issue_date}`, w - 14, yr, { align: "right" }); yr += 4;
+    if (inv.due_date) { doc.text(`Échéance : ${inv.due_date}`, w - 14, yr, { align: "right" }); yr += 4; }
+    y = Math.max(y, yr) + 10;
+
+    // Client box
+    if (client) {
+      doc.setFillColor(248, 248, 252);
+      doc.roundedRect(14, y, w - 28, 24, 2, 2, "F");
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text("FACTURÉ À", 18, y + 5);
+      doc.setFontSize(11);
+      doc.setTextColor(26, 26, 46);
+      doc.text(client.company || client.name || "", 18, y + 11);
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      const clientLine2 = [client.name !== client.company ? client.name : "", client.email].filter(Boolean).join(" — ");
+      if (clientLine2) doc.text(clientLine2, 18, y + 17);
+      y += 30;
+    }
+
+    // Table header
+    y += 5;
+    doc.setFillColor(124, 58, 237);
+    doc.rect(14, y, w - 28, 8, "F");
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Description", 18, y + 5.5);
+    doc.text("Qté", 110, y + 5.5);
+    doc.text("Prix unit.", 125, y + 5.5);
+    doc.text("TVA", 155, y + 5.5);
+    doc.text("Total", w - 18, y + 5.5, { align: "right" });
+    y += 10;
+
+    // Table rows
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(9);
+    for (const item of items) {
+      const lineTotal = item.quantity * item.unit_price;
+      doc.text(item.description || "", 18, y + 4);
+      doc.text(String(item.quantity), 113, y + 4);
+      doc.text(`${formatCHF(item.unit_price)}`, 125, y + 4);
+      doc.text(`${item.tva_rate}%`, 155, y + 4);
+      doc.text(`${formatCHF(lineTotal)}`, w - 18, y + 4, { align: "right" });
+      doc.setDrawColor(230, 230, 230);
+      doc.line(14, y + 7, w - 14, y + 7);
+      y += 9;
+    }
+
+    // Totals
+    y += 5;
+    const totX = 130;
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Sous-total HT", totX, y);
+    doc.text(`${formatCHF(inv.subtotal)} CHF`, w - 18, y, { align: "right" });
+    y += 6;
+    doc.text("TVA", totX, y);
+    doc.text(`${formatCHF(inv.tva_amount)} CHF`, w - 18, y, { align: "right" });
+    y += 8;
+    doc.setDrawColor(124, 58, 237);
+    doc.setLineWidth(0.5);
+    doc.line(totX, y - 2, w - 14, y - 2);
+    doc.setFontSize(13);
+    doc.setTextColor(124, 58, 237);
+    doc.text("Total TTC", totX, y + 4);
+    doc.text(`${formatCHF(inv.total)} CHF`, w - 18, y + 4, { align: "right" });
+
+    // Notes
+    if (inv.notes) {
+      y += 20;
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Notes : ${inv.notes}`, 14, y, { maxWidth: w - 28 });
+    }
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(180, 180, 180);
+    doc.text(`Généré par Merciinternet.ch — ${new Date().toLocaleDateString("fr-CH")}`, w / 2, 285, { align: "center" });
+
+    doc.save(`Facture_${invoiceNumber}.pdf`);
   }
 
   const [sending, setSending] = useState<string | null>(null);
