@@ -48,6 +48,7 @@ interface UserSettings {
   postal_code: string;
   email: string;
   phone: string;
+  iban: string;
   next_invoice_number: number;
   default_tva_rate: number;
   default_payment_terms: string;
@@ -88,7 +89,7 @@ export default function Facturation() {
   // Settings form
   const [settingsForm, setSettingsForm] = useState<UserSettings>({
     company_name: "", address: "", city: "", postal_code: "", email: "", phone: "",
-    next_invoice_number: 1, default_tva_rate: 8.1, default_payment_terms: "30 jours",
+    next_invoice_number: 1, default_tva_rate: 8.1, default_payment_terms: "30 jours", iban: "",
   });
 
   const loadData = useCallback(async () => {
@@ -288,7 +289,142 @@ export default function Facturation() {
       doc.text(`Notes : ${inv.notes}`, 14, y, { maxWidth: w - 28 });
     }
 
-    // Footer
+    // QR-Bill payment section (if IBAN is configured)
+    const iban = settings?.iban?.replace(/\s/g, "") || "";
+    if (iban && iban.startsWith("CH")) {
+      const QRCode = (await import("qrcode")).default;
+
+      // Build Swiss QR code payload (SPC format)
+      const senderName = settings?.company_name || "";
+      const senderAddress = settings?.address || "";
+      const senderPostal = settings?.postal_code || "";
+      const senderCity = settings?.city || "";
+      const clientName = client?.company || client?.name || "";
+      const clientAddress = client?.address || "";
+      const clientPostal = client?.postal_code || "";
+      const clientCity = client?.city || "";
+
+      const qrPayload = [
+        "SPC",           // QR Type
+        "0200",          // Version
+        "1",             // Coding Type (UTF-8)
+        iban,            // IBAN
+        "S",             // Address type (Structured)
+        senderName,      // Creditor Name
+        senderAddress,   // Street
+        "",              // Building number
+        senderPostal,    // Postal code
+        senderCity,      // City
+        "CH",            // Country
+        "",              // Ultimate Creditor (7 empty fields)
+        "", "", "", "", "", "",
+        inv.total.toFixed(2), // Amount
+        "CHF",           // Currency
+        "S",             // Debtor address type
+        clientName,
+        clientAddress,
+        "",
+        clientPostal,
+        clientCity,
+        "CH",
+        "NON",           // Reference type (NON = no reference)
+        "",              // Reference
+        `Facture ${inv.invoice_number}`, // Additional info
+        "EPD",           // Trailer
+      ].join("\n");
+
+      try {
+        const qrDataUrl = await QRCode.toDataURL(qrPayload, { width: 170, margin: 0, errorCorrectionLevel: "M" });
+
+        // Add new page for QR-Bill section
+        doc.addPage();
+
+        // Dashed separation line
+        doc.setDrawColor(0);
+        doc.setLineDashPattern([2, 2], 0);
+        doc.line(0, 10, w, 10);
+        doc.setLineDashPattern([], 0);
+
+        // Receipt (left side)
+        doc.setFontSize(11);
+        doc.setTextColor(0);
+        doc.text("Récépissé", 5, 18);
+
+        doc.setFontSize(6);
+        doc.setTextColor(0);
+        doc.text("Compte / Payable à", 5, 25);
+        doc.setFontSize(8);
+        doc.text(iban.replace(/(.{4})/g, "$1 ").trim(), 5, 29);
+        doc.text(senderName, 5, 33);
+        if (senderPostal || senderCity) doc.text(`${senderPostal} ${senderCity}`, 5, 37);
+
+        doc.setFontSize(6);
+        doc.text("Payable par", 5, 48);
+        doc.setFontSize(8);
+        doc.text(clientName, 5, 52);
+        if (clientPostal || clientCity) doc.text(`${clientPostal} ${clientCity}`, 5, 56);
+
+        doc.setFontSize(6);
+        doc.text("Monnaie", 5, 68);
+        doc.text("Montant", 25, 68);
+        doc.setFontSize(8);
+        doc.text("CHF", 5, 72);
+        doc.text(formatCHF(inv.total), 25, 72);
+
+        doc.setFontSize(6);
+        doc.text("Point de dépôt", 5, 82);
+
+        // Payment part (right side)
+        const px = 62;
+        doc.setFontSize(11);
+        doc.text("Section paiement", px, 18);
+
+        // QR Code
+        doc.addImage(qrDataUrl, "PNG", px, 22, 46, 46);
+
+        // Swiss cross in center of QR
+        const cx = px + 23 - 3.5;
+        const cy = 22 + 23 - 3.5;
+        doc.setFillColor(0, 0, 0);
+        doc.rect(cx, cy, 7, 7, "F");
+        doc.setFillColor(255, 255, 255);
+        doc.rect(cx + 1.5, cy + 2.5, 4, 2, "F");
+        doc.rect(cx + 2.5, cy + 1.5, 2, 4, "F");
+
+        // Payment info right of QR
+        const infoX = px + 52;
+        doc.setFontSize(6);
+        doc.setTextColor(0);
+        doc.text("Monnaie", infoX, 25);
+        doc.text("Montant", infoX + 20, 25);
+        doc.setFontSize(8);
+        doc.text("CHF", infoX, 29);
+        doc.text(formatCHF(inv.total), infoX + 20, 29);
+
+        doc.setFontSize(6);
+        doc.text("Compte / Payable à", px, 73);
+        doc.setFontSize(8);
+        doc.text(iban.replace(/(.{4})/g, "$1 ").trim(), px, 77);
+        doc.text(senderName, px, 81);
+        if (senderPostal || senderCity) doc.text(`${senderPostal} ${senderCity}`, px, 85);
+
+        doc.setFontSize(6);
+        doc.text("Informations supplémentaires", px, 93);
+        doc.setFontSize(8);
+        doc.text(`Facture ${inv.invoice_number}`, px, 97);
+
+        doc.setFontSize(6);
+        doc.text("Payable par", px, 105);
+        doc.setFontSize(8);
+        doc.text(clientName, px, 109);
+        if (clientPostal || clientCity) doc.text(`${clientPostal} ${clientCity}`, px, 113);
+
+      } catch (e) {
+        console.error("QR generation failed:", e);
+      }
+    }
+
+    // Footer on last page
     doc.setFontSize(8);
     doc.setTextColor(180, 180, 180);
     doc.text(`Généré par Merciinternet.ch — ${new Date().toLocaleDateString("fr-CH")}`, w / 2, 285, { align: "center" });
@@ -604,6 +740,10 @@ export default function Facturation() {
               <input type="text" value={settingsForm.postal_code} onChange={(e) => setSettingsForm({ ...settingsForm, postal_code: e.target.value })} placeholder="NPA" className="rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none" />
               <input type="email" value={settingsForm.email} onChange={(e) => setSettingsForm({ ...settingsForm, email: e.target.value })} placeholder="Email" className="rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none" />
               <input type="tel" value={settingsForm.phone} onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })} placeholder="Téléphone" className="rounded-lg border border-zinc-200 px-3 py-2.5 text-base focus:border-violet-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-zinc-400 mb-1">IBAN (pour QR-facture suisse)</label>
+              <input type="text" value={settingsForm.iban || ""} onChange={(e) => setSettingsForm({ ...settingsForm, iban: e.target.value.toUpperCase() })} placeholder="CH00 0000 0000 0000 0000 0" className="w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-base font-mono focus:border-violet-500 focus:outline-none" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
