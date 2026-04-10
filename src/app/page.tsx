@@ -371,6 +371,56 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Founder */}
+      <section className="px-6 py-24">
+        <div className="mx-auto max-w-4xl">
+          <div className="grid items-center gap-12 md:grid-cols-2">
+            <div className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/adrien.webp" alt="Adrien Haubrich" className="h-64 w-64 rounded-2xl object-cover shadow-lg" />
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium uppercase tracking-wider text-violet-600">Qui suis-je</p>
+              <h2 className="mb-4 text-3xl font-bold text-indigo-950">Adrien Haubrich</h2>
+              <p className="mb-4 text-gray-600 leading-relaxed">
+                Indépendant basé au Bouveret en Valais, j&apos;ai créé Merciinternet parce que je galérais moi-même avec ma compta. Trop de temps passé sur Excel, des factures qui traînent, la fiduciaire qui attend...
+              </p>
+              <p className="mb-6 text-gray-600 leading-relaxed">
+                J&apos;ai construit l&apos;outil que j&apos;aurais voulu avoir dès le premier jour. Simple, en CHF, pensé pour les indépendants suisses comme moi.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <span className="rounded-full bg-violet-100 px-4 py-1.5 text-sm font-medium text-violet-700">Indépendant en Suisse</span>
+                <span className="rounded-full bg-violet-100 px-4 py-1.5 text-sm font-medium text-violet-700">Le Bouveret, Valais</span>
+                <span className="rounded-full bg-violet-100 px-4 py-1.5 text-sm font-medium text-violet-700">Entrepreneur depuis 2017</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Guarantees */}
+      <section className="bg-violet-50/50 px-6 py-16">
+        <div className="mx-auto max-w-4xl">
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
+              <div className="mb-3 text-3xl">🔒</div>
+              <h3 className="mb-1 text-sm font-bold text-indigo-950">Données sécurisées</h3>
+              <p className="text-xs text-gray-600">Vos données restent sur votre appareil. Rien n&apos;est partagé avec des tiers.</p>
+            </div>
+            <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
+              <div className="mb-3 text-3xl">💬</div>
+              <h3 className="mb-1 text-sm font-bold text-indigo-950">Support par WhatsApp</h3>
+              <p className="text-xs text-gray-600">Une question ? Écrivez-moi directement, je réponds personnellement.</p>
+            </div>
+            <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
+              <div className="mb-3 text-3xl">✅</div>
+              <h3 className="mb-1 text-sm font-bold text-indigo-950">Satisfait ou remboursé</h3>
+              <p className="text-xs text-gray-600">30 jours pour essayer. Si ça ne vous convient pas, remboursement intégral.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="px-6 py-24">
         <div className="mx-auto max-w-4xl">
