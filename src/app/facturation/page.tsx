@@ -182,6 +182,16 @@ export default function Facturation() {
     window.open(`/api/invoice/pdf?id=${id}`, "_blank");
   }
 
+  function downloadPDF(id: string, invoiceNumber: string) {
+    const w = window.open(`/api/invoice/pdf?id=${id}`, "_blank");
+    if (w) {
+      w.onload = () => {
+        w.document.title = `Facture_${invoiceNumber}`;
+        setTimeout(() => w.print(), 500);
+      };
+    }
+  }
+
   const [sending, setSending] = useState<string | null>(null);
 
   async function sendInvoice(id: string) {
@@ -296,7 +306,8 @@ export default function Facturation() {
                         <p className="text-[10px] text-zinc-400">{inv.issue_date}</p>
                       </div>
                       <div className="flex gap-1 flex-wrap justify-end">
-                        <button onClick={() => viewPDF(inv.id)} className="rounded-lg bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-600 hover:bg-violet-100">PDF</button>
+                        <button onClick={() => viewPDF(inv.id)} className="rounded-lg bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-600 hover:bg-violet-100">Voir</button>
+                        <button onClick={() => downloadPDF(inv.id, inv.invoice_number)} className="rounded-lg bg-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-600 hover:bg-zinc-200">Télécharger</button>
                         {inv.status === "draft" && inv.client_id && (
                           <button onClick={() => sendInvoice(inv.id)} disabled={sending === inv.id} className="rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-600 hover:bg-blue-100 disabled:opacity-50">
                             {sending === inv.id ? "Envoi..." : "Envoyer"}
