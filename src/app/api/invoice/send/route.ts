@@ -1,12 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || "465"),
+  secure: true,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
 function formatCHF(n: number) {
   return n.toLocaleString("fr-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -92,8 +100,8 @@ export async function POST(request: Request) {
       </div>
     </div>`;
 
-    await resend.emails.send({
-      from: `${senderName} <onboarding@resend.dev>`,
+    await transporter.sendMail({
+      from: `"${senderName}" <factures@merciinternet.ch>`,
       to: client.email,
       subject: `Facture ${invoice.invoice_number} — ${formatCHF(invoice.total)} CHF`,
       html: emailHtml,
