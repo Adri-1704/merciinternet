@@ -558,12 +558,24 @@ export default function Plan2026Page() {
               <button
                 onClick={() => {
                   if (confirm("Supprimer toutes les ventes Atelier Suisse ?")) {
+                    // 1. Modifie directement le localStorage (garantit la persistance)
+                    try {
+                      const raw = localStorage.getItem(STORAGE_KEY);
+                      if (raw) {
+                        const data = JSON.parse(raw);
+                        data.aslSaleByMonth = {};
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                      }
+                    } catch {
+                      /* ignore */
+                    }
+                    // 2. Met à jour le state React
                     setPlan((prev) => (prev ? { ...prev, aslSaleByMonth: {} } : prev));
                   }
                 }}
-                className="text-xs px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold"
+                className="text-sm px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-700 text-white font-bold shadow-sm"
               >
-                Tout effacer
+                🗑 Effacer toutes les ventes
               </button>
             )}
           </div>
