@@ -181,6 +181,49 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// ─── Keyboard navigation (Excel-like) ────────────────────────────────────────
+// Colonnes éditables : 1=CA FF prévu, 2=CA FF réel, 3=Marge FF, 4=CA ASL,
+// 5=Marge ASL, 6=Bar, 7=Vente ASL, 8=Foire VS, 10=Privé, 11=Entreprise, 12=Dette
+const EDITABLE_COLS = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12];
+const TOTAL_ROWS = 12; // 12 mois
+
+function focusCell(row: number, col: number) {
+  const el = document.querySelector<HTMLElement>(`[data-cell="r${row}-c${col}"]`);
+  if (!el) return;
+  if (el.tagName === "INPUT") {
+    el.focus();
+    (el as HTMLInputElement).select?.();
+  } else {
+    // C'est un bouton → on entre en mode édition
+    el.click();
+  }
+}
+
+type NavDirection = "up" | "down" | "left" | "right";
+
+function navigateFromCell(row: number, col: number, direction: NavDirection) {
+  let nextRow = row;
+  let nextCol = col;
+  if (direction === "up") nextRow = Math.max(0, row - 1);
+  else if (direction === "down") nextRow = Math.min(TOTAL_ROWS - 1, row + 1);
+  else if (direction === "left") {
+    const idx = EDITABLE_COLS.indexOf(col);
+    if (idx > 0) nextCol = EDITABLE_COLS[idx - 1];
+    else if (idx === 0 && row > 0) {
+      nextRow = row - 1;
+      nextCol = EDITABLE_COLS[EDITABLE_COLS.length - 1];
+    }
+  } else if (direction === "right") {
+    const idx = EDITABLE_COLS.indexOf(col);
+    if (idx >= 0 && idx < EDITABLE_COLS.length - 1) nextCol = EDITABLE_COLS[idx + 1];
+    else if (idx === EDITABLE_COLS.length - 1 && row < TOTAL_ROWS - 1) {
+      nextRow = row + 1;
+      nextCol = EDITABLE_COLS[0];
+    }
+  }
+  if (nextRow !== row || nextCol !== col) focusCell(nextRow, nextCol);
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Plan2026Page() {
@@ -712,6 +755,8 @@ export default function Plan2026Page() {
                       <EditableCell
                         value={r.caForecast}
                         onChange={(v) => updateForecastCA(r.month.num, v)}
+                        row={i}
+                        col={1}
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right bg-blue-50">
@@ -719,6 +764,8 @@ export default function Plan2026Page() {
                         value={r.caActual}
                         onChange={(v) => updateActualCA(r.month.num, v)}
                         placeholder="—"
+                        row={i}
+                        col={2}
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -728,6 +775,8 @@ export default function Plan2026Page() {
                         overridden={r.overrides.margin !== undefined}
                         onChange={(v) => setOverride(r.month.num, "margin", v)}
                         onReset={() => clearOverride(r.month.num, "margin")}
+                        row={i}
+                        col={3}
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right bg-blue-50">
@@ -735,6 +784,8 @@ export default function Plan2026Page() {
                         value={r.caAsl}
                         onChange={(v) => updateAslCA(r.month.num, v)}
                         placeholder="—"
+                        row={i}
+                        col={4}
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -744,6 +795,8 @@ export default function Plan2026Page() {
                         overridden={r.overrides.aslMargin !== undefined}
                         onChange={(v) => setOverride(r.month.num, "aslMargin", v)}
                         onReset={() => clearOverride(r.month.num, "aslMargin")}
+                        row={i}
+                        col={5}
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -753,6 +806,8 @@ export default function Plan2026Page() {
                         overridden={r.overrides.bar !== undefined}
                         onChange={(v) => setOverride(r.month.num, "bar", v)}
                         onReset={() => clearOverride(r.month.num, "bar")}
+                        row={i}
+                        col={6}
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -762,6 +817,8 @@ export default function Plan2026Page() {
                         overridden={r.overrides.asl !== undefined}
                         onChange={(v) => setOverride(r.month.num, "asl", v)}
                         onReset={() => clearOverride(r.month.num, "asl")}
+                        row={i}
+                        col={7}
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -771,6 +828,8 @@ export default function Plan2026Page() {
                         overridden={r.overrides.foire !== undefined}
                         onChange={(v) => setOverride(r.month.num, "foire", v)}
                         onReset={() => clearOverride(r.month.num, "foire")}
+                        row={i}
+                        col={8}
                       />
                     </td>
                     <td className="px-1.5 py-1 text-right tabular-nums font-semibold text-emerald-700 bg-emerald-50 whitespace-nowrap">
@@ -783,6 +842,8 @@ export default function Plan2026Page() {
                         overridden={r.overrides.privateCost !== undefined}
                         onChange={(v) => setOverride(r.month.num, "privateCost", v)}
                         onReset={() => clearOverride(r.month.num, "privateCost")}
+                        row={i}
+                        col={10}
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -792,6 +853,8 @@ export default function Plan2026Page() {
                         overridden={r.overrides.businessCost !== undefined}
                         onChange={(v) => setOverride(r.month.num, "businessCost", v)}
                         onReset={() => clearOverride(r.month.num, "businessCost")}
+                        row={i}
+                        col={11}
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -801,6 +864,8 @@ export default function Plan2026Page() {
                         overridden={r.overrides.debt !== undefined}
                         onChange={(v) => setOverride(r.month.num, "debt", v)}
                         onReset={() => clearOverride(r.month.num, "debt")}
+                        row={i}
+                        col={12}
                       />
                     </td>
                     <td className="px-1.5 py-1 text-right tabular-nums font-semibold text-rose-700 bg-rose-50 whitespace-nowrap">
@@ -953,10 +1018,14 @@ function EditableCell({
   value,
   onChange,
   placeholder,
+  row,
+  col,
 }: {
   value: number;
   onChange: (v: number) => void;
   placeholder?: string;
+  row?: number;
+  col?: number;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value.toString());
@@ -965,24 +1034,52 @@ function EditableCell({
     if (!editing) setDraft(value.toString());
   }, [value, editing]);
 
+  const dataCell = row !== undefined && col !== undefined ? `r${row}-c${col}` : undefined;
+
+  const commit = (nextDraft: string) => {
+    const v = parseFloat(nextDraft);
+    if (!Number.isNaN(v)) onChange(v);
+    else onChange(0);
+  };
+
   if (editing) {
     return (
       <input
+        data-cell={dataCell}
         type="number"
         value={draft}
         autoFocus
         onChange={(e) => setDraft(e.target.value)}
+        onFocus={(e) => e.target.select()}
         onBlur={() => {
-          const v = parseFloat(draft);
-          if (!Number.isNaN(v)) onChange(v);
-          else onChange(0);
+          commit(draft);
           setEditing(false);
         }}
         onKeyDown={(e) => {
-          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-          if (e.key === "Escape") {
+          if (e.key === "Enter") {
+            commit(draft);
+            setEditing(false);
+            if (row !== undefined && col !== undefined) {
+              setTimeout(() => navigateFromCell(row, col, "down"), 0);
+            }
+            e.preventDefault();
+          } else if (e.key === "Tab") {
+            commit(draft);
+            setEditing(false);
+            if (row !== undefined && col !== undefined) {
+              setTimeout(() => navigateFromCell(row, col, e.shiftKey ? "left" : "right"), 0);
+            }
+            e.preventDefault();
+          } else if (e.key === "Escape") {
             setDraft(value.toString());
             setEditing(false);
+          } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            commit(draft);
+            setEditing(false);
+            if (row !== undefined && col !== undefined) {
+              setTimeout(() => navigateFromCell(row, col, e.key === "ArrowUp" ? "up" : "down"), 0);
+            }
+            e.preventDefault();
           }
         }}
         className="w-16 md:w-20 text-right border border-blue-400 rounded px-1 py-0.5 text-[10px] md:text-[11px] tabular-nums bg-white"
@@ -992,8 +1089,23 @@ function EditableCell({
 
   return (
     <button
+      data-cell={dataCell}
       onClick={() => setEditing(true)}
-      className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === "F2") {
+          setEditing(true);
+          e.preventDefault();
+        } else if (
+          row !== undefined &&
+          col !== undefined &&
+          (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
+        ) {
+          const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
+          navigateFromCell(row, col, dir);
+          e.preventDefault();
+        }
+      }}
+      className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
     >
       {value !== 0 ? chfShort(value) : placeholder || "0"}
     </button>
@@ -1006,12 +1118,16 @@ function OverridableCell({
   overridden,
   onChange,
   onReset,
+  row,
+  col,
 }: {
   value: number;
   auto: number;
   overridden: boolean;
   onChange: (v: number) => void;
   onReset: () => void;
+  row?: number;
+  col?: number;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value.toString());
@@ -1020,27 +1136,54 @@ function OverridableCell({
     if (!editing) setDraft(value.toString());
   }, [value, editing]);
 
+  const dataCell = row !== undefined && col !== undefined ? `r${row}-c${col}` : undefined;
+
+  const commit = (nextDraft: string) => {
+    const v = parseFloat(nextDraft);
+    if (!Number.isNaN(v)) {
+      if (Math.abs(v - auto) < 0.001) onReset();
+      else onChange(v);
+    }
+  };
+
   if (editing) {
     return (
       <input
+        data-cell={dataCell}
         type="number"
         value={draft}
         autoFocus
         onChange={(e) => setDraft(e.target.value)}
+        onFocus={(e) => e.target.select()}
         onBlur={() => {
-          const v = parseFloat(draft);
-          if (!Number.isNaN(v)) {
-            // Si la nouvelle valeur == auto, on clear l'override
-            if (Math.abs(v - auto) < 0.001) onReset();
-            else onChange(v);
-          }
+          commit(draft);
           setEditing(false);
         }}
         onKeyDown={(e) => {
-          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-          if (e.key === "Escape") {
+          if (e.key === "Enter") {
+            commit(draft);
+            setEditing(false);
+            if (row !== undefined && col !== undefined) {
+              setTimeout(() => navigateFromCell(row, col, "down"), 0);
+            }
+            e.preventDefault();
+          } else if (e.key === "Tab") {
+            commit(draft);
+            setEditing(false);
+            if (row !== undefined && col !== undefined) {
+              setTimeout(() => navigateFromCell(row, col, e.shiftKey ? "left" : "right"), 0);
+            }
+            e.preventDefault();
+          } else if (e.key === "Escape") {
             setDraft(value.toString());
             setEditing(false);
+          } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            commit(draft);
+            setEditing(false);
+            if (row !== undefined && col !== undefined) {
+              setTimeout(() => navigateFromCell(row, col, e.key === "ArrowUp" ? "up" : "down"), 0);
+            }
+            e.preventDefault();
           }
         }}
         className="w-16 md:w-20 text-right border border-amber-500 rounded px-1 py-0.5 text-[10px] md:text-[11px] tabular-nums bg-white"
@@ -1059,9 +1202,27 @@ function OverridableCell({
   return (
     <div className="flex items-center justify-end gap-0.5">
       <button
+        data-cell={dataCell}
         onClick={() => setEditing(true)}
-        className={`text-right tabular-nums rounded px-0.5 py-0.5 whitespace-nowrap ${displayColor}`}
-        title={overridden ? `Override manuel (auto = ${chfShort(auto)})` : "Clic pour override"}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === "F2") {
+            setEditing(true);
+            e.preventDefault();
+          } else if (
+            row !== undefined &&
+            col !== undefined &&
+            (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
+          ) {
+            const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
+            navigateFromCell(row, col, dir);
+            e.preventDefault();
+          } else if (overridden && (e.key === "Delete" || e.key === "Backspace")) {
+            onReset();
+            e.preventDefault();
+          }
+        }}
+        className={`text-right tabular-nums rounded px-0.5 py-0.5 whitespace-nowrap focus:outline focus:outline-2 focus:outline-amber-500 ${displayColor}`}
+        title={overridden ? `Override manuel (auto = ${chfShort(auto)}) — Suppr pour reset` : "Clic pour override"}
       >
         {value !== 0 ? chfShort(value) : "—"}
       </button>
