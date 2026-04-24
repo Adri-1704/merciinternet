@@ -1073,11 +1073,12 @@ function EditableCell({
           } else if (e.key === "Escape") {
             setDraft(value.toString());
             setEditing(false);
-          } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          } else if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
             commit(draft);
             setEditing(false);
             if (row !== undefined && col !== undefined) {
-              setTimeout(() => navigateFromCell(row, col, e.key === "ArrowUp" ? "up" : "down"), 0);
+              const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
+              setTimeout(() => navigateFromCell(row, col, dir), 0);
             }
             e.preventDefault();
           }
@@ -1177,11 +1178,12 @@ function OverridableCell({
           } else if (e.key === "Escape") {
             setDraft(value.toString());
             setEditing(false);
-          } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          } else if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
             commit(draft);
             setEditing(false);
             if (row !== undefined && col !== undefined) {
-              setTimeout(() => navigateFromCell(row, col, e.key === "ArrowUp" ? "up" : "down"), 0);
+              const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
+              setTimeout(() => navigateFromCell(row, col, dir), 0);
             }
             e.preventDefault();
           }
