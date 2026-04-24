@@ -282,6 +282,7 @@ export default function Plan2026Page() {
     if (!plan) return [];
     const { params, forecastCA, actualCA, aslCA, overrides } = plan;
     let balanceForecast = params.startingBalance;
+    let balanceReal = params.startingBalance;
 
     const computed = MONTHS.map((m) => {
       const ov = overrides[m.num] || {};
@@ -308,11 +309,19 @@ export default function Plan2026Page() {
       const businessCost = ov.businessCost ?? autoBusiness;
       const debt = ov.debt ?? autoDebt;
 
+      // Marge réelle basée sur CA réel saisi (0 si pas encore saisi)
+      const marginReal = caActual * (params.funkyfeetMarginPercent / 100);
+      // Si override manuel sur marge, on le respecte aussi pour la colonne réelle
+      const marginRealEffective = ov.margin ?? marginReal;
+
       const totalInForecast = marginForecast + aslMargin + bar + asl + foire;
+      const totalInReal = marginRealEffective + aslMargin + bar + asl + foire;
       const totalOut = privateCost + businessCost + debt;
       const netForecast = totalInForecast - totalOut;
+      const netReal = totalInReal - totalOut;
 
       balanceForecast += netForecast;
+      balanceReal += netReal;
 
       return {
         month: m,
@@ -330,6 +339,7 @@ export default function Plan2026Page() {
         foire,
         autoFoire,
         totalInForecast,
+        totalInReal,
         privateCost,
         autoPrivate,
         businessCost,
@@ -338,19 +348,23 @@ export default function Plan2026Page() {
         autoDebt,
         totalOut,
         netForecast,
+        netReal,
         balanceForecast,
+        balanceReal,
         overrides: ov,
       };
     });
 
-    // Ancrage : si activé, on décale toute la série de soldes
+    // Ancrage : si activé, on décale les 2 séries de soldes (forecast + réel)
     // pour que le solde à la fin du mois d'ancrage soit égal à anchorBalance.
     if (params.anchorEnabled) {
       const anchorRow = computed.find((r) => r.month.num === params.anchorMonth);
       if (anchorRow) {
-        const shift = params.anchorBalance - anchorRow.balanceForecast;
+        const shiftForecast = params.anchorBalance - anchorRow.balanceForecast;
+        const shiftReal = params.anchorBalance - anchorRow.balanceReal;
         computed.forEach((r) => {
-          r.balanceForecast += shift;
+          r.balanceForecast += shiftForecast;
+          r.balanceReal += shiftReal;
         });
       }
     }
@@ -359,6 +373,7 @@ export default function Plan2026Page() {
   }, [plan]);
 
   const finalBalance = rows.length ? rows[rows.length - 1].balanceForecast : 0;
+  const finalBalanceReal = rows.length ? rows[rows.length - 1].balanceReal : 0;
   const gap = plan ? plan.params.objective - finalBalance : 0;
   const cashNadir = rows.reduce((min, r) => Math.min(min, r.balanceForecast), Infinity);
   const cashNadirMonth = rows.find((r) => r.balanceForecast === cashNadir)?.month.name || "—";
@@ -402,15 +417,20 @@ export default function Plan2026Page() {
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* ─── KPIs ─── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <KpiCard label="Objectif 31/12/2026" value={chf(plan.params.objective)} accent="primary" />
           <KpiCard
-            label="Projection fin d'année"
+            label="Projection prévue fin année"
             value={chf(finalBalance)}
             accent={finalBalance >= plan.params.objective ? "success" : "warning"}
           />
           <KpiCard
-            label={gap <= 0 ? "Objectif dépassé de" : "Écart à combler"}
+            label="Solde réel fin année"
+            value={chf(finalBalanceReal)}
+            accent={finalBalanceReal >= plan.params.objective ? "success" : finalBalanceReal >= 0 ? "neutral" : "danger"}
+          />
+          <KpiCard
+            label={gap <= 0 ? "Objectif dépassé de" : "Écart à combler (prévu)"}
             value={chf(Math.abs(gap))}
             accent={gap <= 0 ? "success" : "danger"}
           />
@@ -680,7 +700,8 @@ export default function Plan2026Page() {
                   <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Dette</th>
                   <th className="px-1.5 py-1.5 text-right font-semibold bg-rose-700 whitespace-nowrap">Total OUT</th>
                   <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Net</th>
-                  <th className="px-1.5 py-1.5 text-right font-semibold bg-violet-700 whitespace-nowrap">Solde</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold bg-violet-700 whitespace-nowrap">Solde prévu</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold bg-emerald-700 whitespace-nowrap">Solde réel</th>
                 </tr>
               </thead>
               <tbody>
@@ -791,6 +812,9 @@ export default function Plan2026Page() {
                     <td className={`px-1.5 py-1 text-right tabular-nums font-bold whitespace-nowrap ${r.balanceForecast >= 0 ? "text-violet-800 bg-violet-50" : "text-rose-700 bg-rose-50"}`}>
                       {chfShort(r.balanceForecast)}
                     </td>
+                    <td className={`px-1.5 py-1 text-right tabular-nums font-bold whitespace-nowrap ${r.balanceReal >= 0 ? "text-emerald-800 bg-emerald-50" : "text-rose-700 bg-rose-50"}`}>
+                      {chfShort(r.balanceReal)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -825,6 +849,9 @@ export default function Plan2026Page() {
                   </td>
                   <td className="px-1.5 py-2 text-right tabular-nums text-violet-800 bg-violet-100">
                     {chfShort(finalBalance)}
+                  </td>
+                  <td className="px-1.5 py-2 text-right tabular-nums text-emerald-800 bg-emerald-100">
+                    {chfShort(rows.length ? rows[rows.length - 1].balanceReal : 0)}
                   </td>
                 </tr>
               </tfoot>
