@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -1157,6 +1157,17 @@ function EditableCell({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value.toString());
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sélectionne tout le contenu quand on entre en édition
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      // setTimeout pour passer après autoFocus du navigateur
+      setTimeout(() => {
+        inputRef.current?.select();
+      }, 0);
+    }
+  }, [editing]);
 
   useEffect(() => {
     if (!editing) setDraft(value.toString());
@@ -1173,12 +1184,14 @@ function EditableCell({
   if (editing) {
     return (
       <input
+        ref={inputRef}
         data-cell={dataCell}
-        type="number"
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9-]*"
         value={draft}
         autoFocus
         onChange={(e) => setDraft(e.target.value)}
-        onFocus={(e) => e.target.select()}
         onBlur={() => {
           commit(draft);
           setEditing(false);
@@ -1201,15 +1214,25 @@ function EditableCell({
           } else if (e.key === "Escape") {
             setDraft(value.toString());
             setEditing(false);
-          } else if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          } else if (
+            (e.metaKey || e.ctrlKey) &&
+            (e.key === "Delete" || e.key === "Backspace")
+          ) {
+            // Cmd+Delete ou Cmd+Backspace = efface tout + commit 0
+            setDraft("");
+            onChange(0);
+            setEditing(false);
+            e.preventDefault();
+          } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
             commit(draft);
             setEditing(false);
             if (row !== undefined && col !== undefined) {
-              const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
-              setTimeout(() => navigateFromCell(row, col, dir), 0);
+              setTimeout(() => navigateFromCell(row, col, e.key === "ArrowUp" ? "up" : "down"), 0);
             }
             e.preventDefault();
           }
+          // Note: ArrowLeft/Right ne change plus de cellule en édition
+          // pour laisser le curseur se déplacer dans le texte (plus intuitif)
         }}
         className="w-16 md:w-20 text-right border border-blue-400 rounded px-1 py-0.5 text-[10px] md:text-[11px] tabular-nums bg-white"
       />
