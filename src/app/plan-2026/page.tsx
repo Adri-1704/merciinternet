@@ -70,10 +70,15 @@ const DEFAULT_ASL_CA: Record<number, number> = {
   4: 0, 5: 0, 6: 0, 7: 0,
 };
 
-// CA forecast avril → déc = 275 000 CHF
-// (25 000 CHF déjà réalisé en YTD jan → 23 avril, total année cible = 300 000 CHF)
+// CA forecast année complète (jan → déc)
+// Total cible 2026 : 300 000 CHF
+// Jan-Mars = réalisé (~25k YTD à répartir selon ton actuel)
+// Avril = en cours. Mai → Déc = projection saisonnière
 const DEFAULT_FORECAST_CA: Record<number, number> = {
-  4: 4000,   // 7 derniers jours d'avril (reste à faire)
+  1: 7000,
+  2: 8000,
+  3: 10000,
+  4: 6000,
   5: 10000,
   6: 13000,
   7: 16000,
@@ -81,10 +86,13 @@ const DEFAULT_FORECAST_CA: Record<number, number> = {
   9: 27000,
   10: 42000,
   11: 65000,
-  12: 78000,
+  12: 76000,
 };
 
 const MONTHS = [
+  { num: 1, name: "Janvier", short: "Jan" },
+  { num: 2, name: "Février", short: "Fév" },
+  { num: 3, name: "Mars", short: "Mar" },
   { num: 4, name: "Avril", short: "Avr" },
   { num: 5, name: "Mai", short: "Mai" },
   { num: 6, name: "Juin", short: "Juin" },
@@ -603,45 +611,45 @@ export default function Plan2026Page() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs md:text-sm">
+            <table className="w-full text-[10px] md:text-[11px]">
               <thead>
                 <tr className="bg-gray-900 text-white">
-                  <th className="px-3 py-2 text-left font-semibold">Mois</th>
-                  <th className="px-3 py-2 text-right font-semibold bg-blue-900">CA FF prévu</th>
-                  <th className="px-3 py-2 text-right font-semibold bg-blue-900">CA FF réel</th>
-                  <th className="px-3 py-2 text-right font-semibold">Marge FF</th>
-                  <th className="px-3 py-2 text-right font-semibold bg-blue-900">CA ASL</th>
-                  <th className="px-3 py-2 text-right font-semibold">Marge ASL</th>
-                  <th className="px-3 py-2 text-right font-semibold">Bar</th>
-                  <th className="px-3 py-2 text-right font-semibold">Vente ASL</th>
-                  <th className="px-3 py-2 text-right font-semibold">Foire VS</th>
-                  <th className="px-3 py-2 text-right font-semibold bg-emerald-700">Total IN</th>
-                  <th className="px-3 py-2 text-right font-semibold">Privé</th>
-                  <th className="px-3 py-2 text-right font-semibold">Ent.</th>
-                  <th className="px-3 py-2 text-right font-semibold">Dette</th>
-                  <th className="px-3 py-2 text-right font-semibold bg-rose-700">Total OUT</th>
-                  <th className="px-3 py-2 text-right font-semibold">Net</th>
-                  <th className="px-3 py-2 text-right font-semibold bg-violet-700">Solde</th>
+                  <th className="px-2 py-1.5 text-left font-semibold whitespace-nowrap">Mois</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold bg-blue-900 whitespace-nowrap">CA FF prévu</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold bg-blue-900 whitespace-nowrap">CA FF réel</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Marge FF</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold bg-blue-900 whitespace-nowrap">CA ASL</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Marge ASL</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Bar</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Vente ASL</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Foire VS</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold bg-emerald-700 whitespace-nowrap">Total IN</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Privé</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Ent.</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Dette</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold bg-rose-700 whitespace-nowrap">Total OUT</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold whitespace-nowrap">Net</th>
+                  <th className="px-1.5 py-1.5 text-right font-semibold bg-violet-700 whitespace-nowrap">Solde</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r, i) => (
                   <tr key={r.month.num} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                    <td className="px-3 py-2 font-semibold text-gray-900">{r.month.name}</td>
-                    <td className="px-2 py-1 text-right bg-blue-50">
+                    <td className="px-2 py-1 font-semibold text-gray-900 whitespace-nowrap">{r.month.name}</td>
+                    <td className="px-1 py-0.5 text-right bg-blue-50">
                       <EditableCell
                         value={r.caForecast}
                         onChange={(v) => updateForecastCA(r.month.num, v)}
                       />
                     </td>
-                    <td className="px-2 py-1 text-right bg-blue-50">
+                    <td className="px-1 py-0.5 text-right bg-blue-50">
                       <EditableCell
                         value={r.caActual}
                         onChange={(v) => updateActualCA(r.month.num, v)}
                         placeholder="—"
                       />
                     </td>
-                    <td className="px-2 py-1 text-right">
+                    <td className="px-1 py-0.5 text-right">
                       <OverridableCell
                         value={r.marginForecast}
                         auto={r.autoMargin}
@@ -650,14 +658,14 @@ export default function Plan2026Page() {
                         onReset={() => clearOverride(r.month.num, "margin")}
                       />
                     </td>
-                    <td className="px-2 py-1 text-right bg-blue-50">
+                    <td className="px-1 py-0.5 text-right bg-blue-50">
                       <EditableCell
                         value={r.caAsl}
                         onChange={(v) => updateAslCA(r.month.num, v)}
                         placeholder="—"
                       />
                     </td>
-                    <td className="px-2 py-1 text-right">
+                    <td className="px-1 py-0.5 text-right">
                       <OverridableCell
                         value={r.aslMargin}
                         auto={r.autoAslMargin}
@@ -666,7 +674,7 @@ export default function Plan2026Page() {
                         onReset={() => clearOverride(r.month.num, "aslMargin")}
                       />
                     </td>
-                    <td className="px-2 py-1 text-right">
+                    <td className="px-1 py-0.5 text-right">
                       <OverridableCell
                         value={r.bar}
                         auto={r.autoBar}
@@ -675,7 +683,7 @@ export default function Plan2026Page() {
                         onReset={() => clearOverride(r.month.num, "bar")}
                       />
                     </td>
-                    <td className="px-2 py-1 text-right">
+                    <td className="px-1 py-0.5 text-right">
                       <OverridableCell
                         value={r.asl}
                         auto={r.autoAsl}
@@ -684,7 +692,7 @@ export default function Plan2026Page() {
                         onReset={() => clearOverride(r.month.num, "asl")}
                       />
                     </td>
-                    <td className="px-2 py-1 text-right">
+                    <td className="px-1 py-0.5 text-right">
                       <OverridableCell
                         value={r.foire}
                         auto={r.autoFoire}
@@ -693,10 +701,10 @@ export default function Plan2026Page() {
                         onReset={() => clearOverride(r.month.num, "foire")}
                       />
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700 bg-emerald-50">
+                    <td className="px-1.5 py-1 text-right tabular-nums font-semibold text-emerald-700 bg-emerald-50 whitespace-nowrap">
                       {chfShort(r.totalInForecast)}
                     </td>
-                    <td className="px-2 py-1 text-right">
+                    <td className="px-1 py-0.5 text-right">
                       <OverridableCell
                         value={r.privateCost}
                         auto={r.autoPrivate}
@@ -705,7 +713,7 @@ export default function Plan2026Page() {
                         onReset={() => clearOverride(r.month.num, "privateCost")}
                       />
                     </td>
-                    <td className="px-2 py-1 text-right">
+                    <td className="px-1 py-0.5 text-right">
                       <OverridableCell
                         value={r.businessCost}
                         auto={r.autoBusiness}
@@ -714,7 +722,7 @@ export default function Plan2026Page() {
                         onReset={() => clearOverride(r.month.num, "businessCost")}
                       />
                     </td>
-                    <td className="px-2 py-1 text-right">
+                    <td className="px-1 py-0.5 text-right">
                       <OverridableCell
                         value={r.debt}
                         auto={r.autoDebt}
@@ -723,13 +731,13 @@ export default function Plan2026Page() {
                         onReset={() => clearOverride(r.month.num, "debt")}
                       />
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold text-rose-700 bg-rose-50">
+                    <td className="px-1.5 py-1 text-right tabular-nums font-semibold text-rose-700 bg-rose-50 whitespace-nowrap">
                       {chfShort(r.totalOut)}
                     </td>
-                    <td className={`px-3 py-2 text-right tabular-nums font-semibold ${r.netForecast >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                    <td className={`px-1.5 py-1 text-right tabular-nums font-semibold whitespace-nowrap ${r.netForecast >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                       {r.netForecast >= 0 ? "+" : ""}{chfShort(r.netForecast)}
                     </td>
-                    <td className={`px-3 py-2 text-right tabular-nums font-bold ${r.balanceForecast >= 0 ? "text-violet-800 bg-violet-50" : "text-rose-700 bg-rose-50"}`}>
+                    <td className={`px-1.5 py-1 text-right tabular-nums font-bold whitespace-nowrap ${r.balanceForecast >= 0 ? "text-violet-800 bg-violet-50" : "text-rose-700 bg-rose-50"}`}>
                       {chfShort(r.balanceForecast)}
                     </td>
                   </tr>
@@ -737,34 +745,34 @@ export default function Plan2026Page() {
               </tbody>
               <tfoot>
                 <tr className="bg-gray-100 border-t-2 border-gray-900 font-bold">
-                  <td className="px-3 py-3">TOTAL</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{chfShort(totalForecastCA)}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{chfShort(totalActualCA)}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">
+                  <td className="px-1.5 py-2">TOTAL</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">{chfShort(totalForecastCA)}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">{chfShort(totalActualCA)}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">
                     {chfShort(rows.reduce((s, r) => s + r.marginForecast, 0))}
                   </td>
-                  <td className="px-3 py-3 text-right tabular-nums">
+                  <td className="px-1.5 py-2 text-right tabular-nums">
                     {chfShort(rows.reduce((s, r) => s + r.caAsl, 0))}
                   </td>
-                  <td className="px-3 py-3 text-right tabular-nums">
+                  <td className="px-1.5 py-2 text-right tabular-nums">
                     {chfShort(rows.reduce((s, r) => s + r.aslMargin, 0))}
                   </td>
-                  <td className="px-3 py-3 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.bar, 0))}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.asl, 0))}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.foire, 0))}</td>
-                  <td className="px-3 py-3 text-right tabular-nums text-emerald-700">
+                  <td className="px-1.5 py-2 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.bar, 0))}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.asl, 0))}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.foire, 0))}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums text-emerald-700">
                     {chfShort(rows.reduce((s, r) => s + r.totalInForecast, 0))}
                   </td>
-                  <td className="px-3 py-3 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.privateCost, 0))}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.businessCost, 0))}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.debt, 0))}</td>
-                  <td className="px-3 py-3 text-right tabular-nums text-rose-700">
+                  <td className="px-1.5 py-2 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.privateCost, 0))}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.businessCost, 0))}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.debt, 0))}</td>
+                  <td className="px-1.5 py-2 text-right tabular-nums text-rose-700">
                     {chfShort(rows.reduce((s, r) => s + r.totalOut, 0))}
                   </td>
-                  <td className="px-3 py-3 text-right tabular-nums text-emerald-700">
+                  <td className="px-1.5 py-2 text-right tabular-nums text-emerald-700">
                     +{chfShort(rows.reduce((s, r) => s + r.netForecast, 0))}
                   </td>
-                  <td className="px-3 py-3 text-right tabular-nums text-violet-800 bg-violet-100">
+                  <td className="px-1.5 py-2 text-right tabular-nums text-violet-800 bg-violet-100">
                     {chfShort(finalBalance)}
                   </td>
                 </tr>
@@ -899,7 +907,7 @@ function EditableCell({
             setEditing(false);
           }
         }}
-        className="w-20 md:w-24 text-right border border-blue-400 rounded px-1 py-0.5 text-xs md:text-sm tabular-nums bg-white"
+        className="w-16 md:w-20 text-right border border-blue-400 rounded px-1 py-0.5 text-[10px] md:text-[11px] tabular-nums bg-white"
       />
     );
   }
@@ -907,7 +915,7 @@ function EditableCell({
   return (
     <button
       onClick={() => setEditing(true)}
-      className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 rounded px-1 py-0.5 font-semibold"
+      className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
     >
       {value > 0 ? chfShort(value) : placeholder || "0"}
     </button>
@@ -957,7 +965,7 @@ function OverridableCell({
             setEditing(false);
           }
         }}
-        className="w-20 md:w-24 text-right border border-amber-500 rounded px-1 py-0.5 text-xs md:text-sm tabular-nums bg-white"
+        className="w-16 md:w-20 text-right border border-amber-500 rounded px-1 py-0.5 text-[10px] md:text-[11px] tabular-nums bg-white"
       />
     );
   }
@@ -969,10 +977,10 @@ function OverridableCell({
     : "text-gray-300 hover:bg-gray-100";
 
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex items-center justify-end gap-0.5">
       <button
         onClick={() => setEditing(true)}
-        className={`text-right tabular-nums rounded px-1 py-0.5 ${displayColor}`}
+        className={`text-right tabular-nums rounded px-0.5 py-0.5 whitespace-nowrap ${displayColor}`}
         title={overridden ? `Override manuel (auto = ${chfShort(auto)})` : "Clic pour override"}
       >
         {value > 0 ? chfShort(value) : "—"}
@@ -980,7 +988,7 @@ function OverridableCell({
       {overridden && (
         <button
           onClick={onReset}
-          className="text-amber-500 hover:text-amber-700 text-[10px] leading-none"
+          className="text-amber-500 hover:text-amber-700 text-[9px] leading-none"
           title="Supprimer l'override (revenir à l'auto)"
         >
           ↺
