@@ -1270,49 +1270,45 @@ function EditableCell({
   }
 
   return (
-    <div className="flex items-center justify-end gap-1">
-      <button
-        data-cell={dataCell}
-        onClick={() => setEditing(true)}
-        onKeyDown={(e) => {
-          if (
-            row !== undefined &&
-            col !== undefined &&
-            (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
-          ) {
-            const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
-            navigateFromCell(row, col, dir);
-            e.preventDefault();
-          }
-        }}
-        className="flex-1 text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
-        title="Clic pour éditer"
-      >
-        {value !== 0 ? chfShort(value) : placeholder || "0"}
-      </button>
-      {allowClear && value !== 0 && (
-        <span
-          role="button"
-          tabIndex={0}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onChange(0);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              onChange(0);
-            }
-          }}
-          className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-700 text-white text-[10px] font-bold leading-none cursor-pointer select-none"
-          title="Effacer la valeur"
-          aria-label="Effacer"
-        >
-          ×
-        </span>
-      )}
-    </div>
+    <button
+      data-cell={dataCell}
+      onDoubleClick={() => setEditing(true)}
+      onKeyDown={(e) => {
+        // Delete / Backspace = efface la cellule (comme Excel)
+        if (e.key === "Delete" || e.key === "Backspace") {
+          onChange(0);
+          e.preventDefault();
+          return;
+        }
+        // Enter / F2 = édition
+        if (e.key === "Enter" || e.key === "F2") {
+          setEditing(true);
+          e.preventDefault();
+          return;
+        }
+        // Taper un chiffre ou − = édition avec remplacement direct
+        if (/^[0-9]$/.test(e.key) || e.key === "-") {
+          setDraft(e.key);
+          setEditing(true);
+          e.preventDefault();
+          return;
+        }
+        // Flèches = navigation
+        if (
+          row !== undefined &&
+          col !== undefined &&
+          (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
+        ) {
+          const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
+          navigateFromCell(row, col, dir);
+          e.preventDefault();
+        }
+      }}
+      className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
+      title="Clic pour sélectionner · Supprimer pour effacer · Double-clic ou Entrée pour éditer"
+    >
+      {value !== 0 ? chfShort(value) : placeholder || "0"}
+    </button>
   );
 }
 
@@ -1408,23 +1404,27 @@ function OverridableCell({
     <div className="flex items-center justify-end gap-0.5">
       <button
         data-cell={dataCell}
-        onClick={(e) => {
-          (e.currentTarget as HTMLButtonElement).focus();
-        }}
         onDoubleClick={() => setEditing(true)}
         onKeyDown={(e) => {
+          // Delete / Backspace = efface (override à 0 ou reset si déjà override)
+          if (e.key === "Delete" || e.key === "Backspace") {
+            if (overridden) onReset();
+            else if (value !== 0) onChange(0);
+            e.preventDefault();
+            return;
+          }
           if (e.key === "Enter" || e.key === "F2") {
             setEditing(true);
             e.preventDefault();
-          } else if (e.key === "Delete" || e.key === "Backspace") {
-            // Delete = revient à l'auto (reset override)
-            if (overridden) onReset();
-            e.preventDefault();
-          } else if (/^[0-9]$/.test(e.key) || e.key === "-") {
+            return;
+          }
+          if (/^[0-9]$/.test(e.key) || e.key === "-") {
             setDraft(e.key);
             setEditing(true);
             e.preventDefault();
-          } else if (
+            return;
+          }
+          if (
             row !== undefined &&
             col !== undefined &&
             (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
@@ -1435,7 +1435,7 @@ function OverridableCell({
           }
         }}
         className={`text-right tabular-nums rounded px-0.5 py-0.5 whitespace-nowrap focus:outline focus:outline-2 focus:outline-amber-500 ${displayColor}`}
-        title={overridden ? `Override (auto = ${chfShort(auto)}) · Suppr pour reset · Entrée/double-clic pour éditer` : "Entrée ou double-clic pour éditer"}
+        title="Clic pour sélectionner · Supprimer pour effacer · Double-clic ou Entrée pour éditer"
       >
         {value !== 0 ? chfShort(value) : "—"}
       </button>
