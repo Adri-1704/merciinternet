@@ -25,11 +25,16 @@ interface PlanParams {
   startingBalance: number;
 }
 
+type OverrideField = "margin" | "bar" | "asl" | "foire" | "privateCost" | "businessCost" | "debt";
+
+type MonthOverrides = Partial<Record<OverrideField, number>>;
+
 interface Plan2026 {
   params: PlanParams;
   forecastCA: Record<number, number>;
   actualCA: Record<number, number>;
   dailyCA: Record<string, number>; // { "2026-04-24": 150 }
+  overrides: Record<number, MonthOverrides>; // { 4: { bar: 0, privateCost: 5000 }, ... }
   notes: string;
   lastUpdate: string;
 }
@@ -93,6 +98,7 @@ function loadPlan(): Plan2026 {
       forecastCA: DEFAULT_FORECAST_CA,
       actualCA: {},
       dailyCA: {},
+      overrides: {},
       notes: "",
       lastUpdate: new Date().toISOString(),
     };
@@ -106,6 +112,7 @@ function loadPlan(): Plan2026 {
         forecastCA: { ...DEFAULT_FORECAST_CA, ...(data.forecastCA || {}) },
         actualCA: data.actualCA || {},
         dailyCA: data.dailyCA || {},
+        overrides: data.overrides || {},
         notes: data.notes || "",
         lastUpdate: data.lastUpdate || new Date().toISOString(),
       };
@@ -118,6 +125,7 @@ function loadPlan(): Plan2026 {
     forecastCA: DEFAULT_FORECAST_CA,
     actualCA: {},
     dailyCA: {},
+    overrides: {},
     notes: "",
     lastUpdate: new Date().toISOString(),
   };
@@ -208,69 +216,97 @@ export default function Plan2026Page() {
       forecastCA: DEFAULT_FORECAST_CA,
       actualCA: {},
       dailyCA: {},
+      overrides: {},
       notes: "",
       lastUpdate: new Date().toISOString(),
     });
+  };
+
+  const setOverride = (month: number, field: OverrideField, value: number) => {
+    if (!plan) return;
+    const next = { ...(plan.overrides[month] || {}), [field]: value };
+    setPlan({ ...plan, overrides: { ...plan.overrides, [month]: next } });
+  };
+
+  const clearOverride = (month: number, field: OverrideField) => {
+    if (!plan) return;
+    const monthOv = { ...(plan.overrides[month] || {}) };
+    delete monthOv[field];
+    const nextOv = { ...plan.overrides };
+    if (Object.keys(monthOv).length === 0) delete nextOv[month];
+    else nextOv[month] = monthOv;
+    setPlan({ ...plan, overrides: nextOv });
+  };
+
+  const clearAllOverrides = () => {
+    if (!plan) return;
+    if (!confirm("Supprimer tous les overrides manuels et revenir aux valeurs calculées automatiquement ?")) return;
+    setPlan({ ...plan, overrides: {} });
   };
 
   // ─── Calculations ──────────────────────────────────────────────────────────
 
   const rows = useMemo(() => {
     if (!plan) return [];
-    const { params, forecastCA, actualCA } = plan;
+    const { params, forecastCA, actualCA, overrides } = plan;
     let balanceForecast = params.startingBalance;
-    let balanceActual = params.startingBalance;
 
     return MONTHS.map((m) => {
+      const ov = overrides[m.num] || {};
       const caForecast = forecastCA[m.num] || 0;
       const caActual = actualCA[m.num] || 0;
-      const marginForecast = caForecast * (params.funkyfeetMarginPercent / 100);
-      const marginActual = caActual * (params.funkyfeetMarginPercent / 100);
 
-      const bar = m.num >= params.barStartMonth && m.num <= params.barEndMonth ? params.barSalary : 0;
-      const asl = m.num === params.aslSaleMonth ? params.aslSaleAmount : 0;
-      const foire = m.num === params.foireValaisMonth ? params.foireValaisAmount : 0;
+      const autoMargin = caForecast * (params.funkyfeetMarginPercent / 100);
+      const autoBar = m.num >= params.barStartMonth && m.num <= params.barEndMonth ? params.barSalary : 0;
+      const autoAsl = m.num === params.aslSaleMonth ? params.aslSaleAmount : 0;
+      const autoFoire = m.num === params.foireValaisMonth ? params.foireValaisAmount : 0;
+      const inFixedPeriod = m.num >= params.fixedStartMonth && m.num <= params.fixedEndMonth;
+      const autoPrivate = inFixedPeriod ? params.fixedPrivate : 0;
+      const autoBusiness = inFixedPeriod ? params.fixedBusiness : 0;
+      const autoDebt = m.num <= params.debtEndMonth && m.num >= params.fixedStartMonth ? params.debtMonthly : 0;
+
+      const marginForecast = ov.margin ?? autoMargin;
+      const bar = ov.bar ?? autoBar;
+      const asl = ov.asl ?? autoAsl;
+      const foire = ov.foire ?? autoFoire;
+      const privateCost = ov.privateCost ?? autoPrivate;
+      const businessCost = ov.businessCost ?? autoBusiness;
+      const debt = ov.debt ?? autoDebt;
 
       const totalInForecast = marginForecast + bar + asl + foire;
-      const totalInActual = marginActual + bar + asl + foire;
-
-      const inFixedPeriod = m.num >= params.fixedStartMonth && m.num <= params.fixedEndMonth;
-      const privateCost = inFixedPeriod ? params.fixedPrivate : 0;
-      const businessCost = inFixedPeriod ? params.fixedBusiness : 0;
-      const debt = m.num <= params.debtEndMonth && m.num >= params.fixedStartMonth ? params.debtMonthly : 0;
       const totalOut = privateCost + businessCost + debt;
-
       const netForecast = totalInForecast - totalOut;
-      const netActual = totalInActual - totalOut;
 
       balanceForecast += netForecast;
-      balanceActual += netActual;
 
       return {
         month: m,
         caForecast,
         caActual,
         marginForecast,
-        marginActual,
+        autoMargin,
         bar,
+        autoBar,
         asl,
+        autoAsl,
         foire,
+        autoFoire,
         totalInForecast,
-        totalInActual,
         privateCost,
+        autoPrivate,
         businessCost,
+        autoBusiness,
         debt,
+        autoDebt,
         totalOut,
         netForecast,
-        netActual,
         balanceForecast,
-        balanceActual,
+        overrides: ov,
       };
     });
   }, [plan]);
 
   const finalBalance = rows.length ? rows[rows.length - 1].balanceForecast : 0;
-  const finalBalanceActual = rows.length ? rows[rows.length - 1].balanceActual : 0;
   const gap = plan ? plan.params.objective - finalBalance : 0;
   const cashNadir = rows.reduce((min, r) => Math.min(min, r.balanceForecast), Infinity);
   const cashNadirMonth = rows.find((r) => r.balanceForecast === cashNadir)?.month.name || "—";
@@ -522,9 +558,19 @@ export default function Plan2026Page() {
 
         {/* ─── MAIN TABLE ─── */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-4 md:px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+          <div className="px-4 md:px-5 py-3 border-b border-gray-200 flex items-center justify-between gap-2">
             <h2 className="text-base font-bold text-gray-900">Prévisionnel mois par mois</h2>
-            <span className="text-xs text-gray-400">Clic sur une cellule bleue pour éditer</span>
+            <div className="flex items-center gap-2">
+              <span className="hidden md:inline text-xs text-gray-400">Cases bleues = éditables. Orange = override manuel.</span>
+              {Object.keys(plan.overrides).length > 0 && (
+                <button
+                  onClick={clearAllOverrides}
+                  className="text-xs px-2 py-1 rounded bg-amber-100 text-amber-800 hover:bg-amber-200"
+                >
+                  Reset overrides
+                </button>
+              )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs md:text-sm">
@@ -563,16 +609,72 @@ export default function Plan2026Page() {
                         placeholder="—"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-gray-700">{chfShort(r.marginForecast)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-gray-700">{r.bar ? chfShort(r.bar) : "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-gray-700">{r.asl ? chfShort(r.asl) : "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-gray-700">{r.foire ? chfShort(r.foire) : "—"}</td>
+                    <td className="px-2 py-1 text-right">
+                      <OverridableCell
+                        value={r.marginForecast}
+                        auto={r.autoMargin}
+                        overridden={r.overrides.margin !== undefined}
+                        onChange={(v) => setOverride(r.month.num, "margin", v)}
+                        onReset={() => clearOverride(r.month.num, "margin")}
+                      />
+                    </td>
+                    <td className="px-2 py-1 text-right">
+                      <OverridableCell
+                        value={r.bar}
+                        auto={r.autoBar}
+                        overridden={r.overrides.bar !== undefined}
+                        onChange={(v) => setOverride(r.month.num, "bar", v)}
+                        onReset={() => clearOverride(r.month.num, "bar")}
+                      />
+                    </td>
+                    <td className="px-2 py-1 text-right">
+                      <OverridableCell
+                        value={r.asl}
+                        auto={r.autoAsl}
+                        overridden={r.overrides.asl !== undefined}
+                        onChange={(v) => setOverride(r.month.num, "asl", v)}
+                        onReset={() => clearOverride(r.month.num, "asl")}
+                      />
+                    </td>
+                    <td className="px-2 py-1 text-right">
+                      <OverridableCell
+                        value={r.foire}
+                        auto={r.autoFoire}
+                        overridden={r.overrides.foire !== undefined}
+                        onChange={(v) => setOverride(r.month.num, "foire", v)}
+                        onReset={() => clearOverride(r.month.num, "foire")}
+                      />
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700 bg-emerald-50">
                       {chfShort(r.totalInForecast)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-gray-700">{r.privateCost ? chfShort(r.privateCost) : "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-gray-700">{r.businessCost ? chfShort(r.businessCost) : "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-gray-700">{r.debt ? chfShort(r.debt) : "—"}</td>
+                    <td className="px-2 py-1 text-right">
+                      <OverridableCell
+                        value={r.privateCost}
+                        auto={r.autoPrivate}
+                        overridden={r.overrides.privateCost !== undefined}
+                        onChange={(v) => setOverride(r.month.num, "privateCost", v)}
+                        onReset={() => clearOverride(r.month.num, "privateCost")}
+                      />
+                    </td>
+                    <td className="px-2 py-1 text-right">
+                      <OverridableCell
+                        value={r.businessCost}
+                        auto={r.autoBusiness}
+                        overridden={r.overrides.businessCost !== undefined}
+                        onChange={(v) => setOverride(r.month.num, "businessCost", v)}
+                        onReset={() => clearOverride(r.month.num, "businessCost")}
+                      />
+                    </td>
+                    <td className="px-2 py-1 text-right">
+                      <OverridableCell
+                        value={r.debt}
+                        auto={r.autoDebt}
+                        overridden={r.overrides.debt !== undefined}
+                        onChange={(v) => setOverride(r.month.num, "debt", v)}
+                        onReset={() => clearOverride(r.month.num, "debt")}
+                      />
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold text-rose-700 bg-rose-50">
                       {chfShort(r.totalOut)}
                     </td>
@@ -755,5 +857,81 @@ function EditableCell({
     >
       {value > 0 ? chfShort(value) : placeholder || "0"}
     </button>
+  );
+}
+
+function OverridableCell({
+  value,
+  auto,
+  overridden,
+  onChange,
+  onReset,
+}: {
+  value: number;
+  auto: number;
+  overridden: boolean;
+  onChange: (v: number) => void;
+  onReset: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value.toString());
+
+  useEffect(() => {
+    if (!editing) setDraft(value.toString());
+  }, [value, editing]);
+
+  if (editing) {
+    return (
+      <input
+        type="number"
+        value={draft}
+        autoFocus
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          const v = parseFloat(draft);
+          if (!Number.isNaN(v)) {
+            // Si la nouvelle valeur == auto, on clear l'override
+            if (Math.abs(v - auto) < 0.001) onReset();
+            else onChange(v);
+          }
+          setEditing(false);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") {
+            setDraft(value.toString());
+            setEditing(false);
+          }
+        }}
+        className="w-20 md:w-24 text-right border border-amber-500 rounded px-1 py-0.5 text-xs md:text-sm tabular-nums bg-white"
+      />
+    );
+  }
+
+  const displayColor = overridden
+    ? "text-amber-700 hover:bg-amber-100 font-bold"
+    : value > 0
+    ? "text-gray-700 hover:bg-gray-100"
+    : "text-gray-300 hover:bg-gray-100";
+
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <button
+        onClick={() => setEditing(true)}
+        className={`text-right tabular-nums rounded px-1 py-0.5 ${displayColor}`}
+        title={overridden ? `Override manuel (auto = ${chfShort(auto)})` : "Clic pour override"}
+      >
+        {value > 0 ? chfShort(value) : "—"}
+      </button>
+      {overridden && (
+        <button
+          onClick={onReset}
+          className="text-amber-500 hover:text-amber-700 text-[10px] leading-none"
+          title="Supprimer l'override (revenir à l'auto)"
+        >
+          ↺
+        </button>
+      )}
+    </div>
   );
 }
