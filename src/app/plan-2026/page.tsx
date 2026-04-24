@@ -146,6 +146,17 @@ function loadPlan(): Plan2026 {
       if (!data.aslSaleByMonth && legacyAmount && legacyMonth) {
         legacySale[legacyMonth] = legacyAmount;
       }
+      // Nettoyage des overrides fantômes "asl" (l'ancienne gestion par override
+      // est remplacée par aslSaleByMonth)
+      const cleanedOverrides: Record<number, MonthOverrides> = {};
+      if (data.overrides) {
+        for (const [monthStr, ov] of Object.entries(data.overrides)) {
+          const monthNum = parseInt(monthStr, 10);
+          const { asl: _discard, ...rest } = (ov as MonthOverrides);
+          void _discard;
+          if (Object.keys(rest).length > 0) cleanedOverrides[monthNum] = rest;
+        }
+      }
       return {
         params: { ...DEFAULT_PARAMS, ...(data.params || {}) },
         forecastCA: { ...DEFAULT_FORECAST_CA, ...(data.forecastCA || {}) },
@@ -153,7 +164,7 @@ function loadPlan(): Plan2026 {
         aslCA: { ...DEFAULT_ASL_CA, ...(data.aslCA || {}) },
         aslSaleByMonth: data.aslSaleByMonth || legacySale,
         dailyCA: data.dailyCA || {},
-        overrides: data.overrides || {},
+        overrides: cleanedOverrides,
         notes: data.notes || "",
         lastUpdate: data.lastUpdate || new Date().toISOString(),
       };
@@ -380,7 +391,9 @@ export default function Plan2026Page() {
       const marginForecast = ov.margin ?? autoMargin;
       const aslMargin = ov.aslMargin ?? autoAslMargin;
       const bar = ov.bar ?? autoBar;
-      const asl = ov.asl ?? autoAsl;
+      // Vente ASL: on utilise UNIQUEMENT aslSaleByMonth, pas d'override
+      // (Évite les overrides fantômes depuis l'ancienne version)
+      const asl = autoAsl;
       const foire = ov.foire ?? autoFoire;
       const privateCost = ov.privateCost ?? autoPrivate;
       const businessCost = ov.businessCost ?? autoBusiness;
