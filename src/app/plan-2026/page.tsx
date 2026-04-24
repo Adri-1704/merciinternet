@@ -1286,7 +1286,10 @@ function EditableCell({
 
   return (
     <button
+      type="button"
+      tabIndex={0}
       data-cell={dataCell}
+      onClick={(e) => e.currentTarget.focus()}
       onDoubleClick={() => setEditing(true)}
       onKeyDown={(e) => {
         // Delete / Backspace = efface la cellule (comme Excel)
@@ -1320,7 +1323,7 @@ function EditableCell({
         }
       }}
       className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
-      title="Clic pour sélectionner · Supprimer pour effacer · Double-clic ou Entrée pour éditer"
+      title="Clic pour sélectionner · Flèches pour naviguer · Supprimer pour effacer · Entrée pour éditer"
     >
       {value !== 0 ? chfShort(value) : placeholder || "0"}
     </button>
@@ -1418,7 +1421,10 @@ function OverridableCell({
   return (
     <div className="flex items-center justify-end gap-0.5">
       <button
+        type="button"
+        tabIndex={0}
         data-cell={dataCell}
+        onClick={(e) => e.currentTarget.focus()}
         onDoubleClick={() => setEditing(true)}
         onKeyDown={(e) => {
           // Delete / Backspace = efface (override à 0 ou reset si déjà override)
@@ -1450,7 +1456,7 @@ function OverridableCell({
           }
         }}
         className={`text-right tabular-nums rounded px-0.5 py-0.5 whitespace-nowrap focus:outline focus:outline-2 focus:outline-amber-500 ${displayColor}`}
-        title="Clic pour sélectionner · Supprimer pour effacer · Double-clic ou Entrée pour éditer"
+        title="Clic pour sélectionner · Flèches pour naviguer · Supprimer pour effacer · Entrée pour éditer"
       >
         {value !== 0 ? chfShort(value) : "—"}
       </button>
