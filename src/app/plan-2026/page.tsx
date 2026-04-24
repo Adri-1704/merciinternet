@@ -282,11 +282,13 @@ export default function Plan2026Page() {
   };
 
   const updateAslSale = (month: number, value: number) => {
-    if (!plan) return;
-    const next = { ...plan.aslSaleByMonth };
-    if (value === 0) delete next[month];
-    else next[month] = value;
-    setPlan({ ...plan, aslSaleByMonth: next });
+    setPlan((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev.aslSaleByMonth };
+      if (value === 0) delete next[month];
+      else next[month] = value;
+      return { ...prev, aslSaleByMonth: next };
+    });
   };
 
   const addDailyCA = () => {
@@ -540,7 +542,7 @@ export default function Plan2026Page() {
               <button
                 onClick={() => {
                   if (confirm("Supprimer toutes les ventes Atelier Suisse ?")) {
-                    setPlan({ ...plan, aslSaleByMonth: {} });
+                    setPlan((prev) => (prev ? { ...prev, aslSaleByMonth: {} } : prev));
                   }
                 }}
                 className="text-xs px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold"
@@ -1240,49 +1242,43 @@ function EditableCell({
   }
 
   return (
-    <button
-      data-cell={dataCell}
-      onClick={(e) => {
-        // Excel-style: single click = focus only (pas d'édition)
-        (e.currentTarget as HTMLButtonElement).focus();
-      }}
-      onDoubleClick={() => setEditing(true)}
-      onKeyDown={(e) => {
-        // Enter / F2 = entre en mode édition
-        if (e.key === "Enter" || e.key === "F2") {
-          setEditing(true);
-          e.preventDefault();
-          return;
-        }
-        // Delete / Backspace = efface la valeur (comme Excel)
-        if (allowClear && (e.key === "Delete" || e.key === "Backspace")) {
-          onChange(0);
-          e.preventDefault();
-          return;
-        }
-        // Taper un chiffre ou le signe − = entre en édition et remplace
-        if (/^[0-9]$/.test(e.key) || e.key === "-") {
-          setDraft(e.key);
-          setEditing(true);
-          e.preventDefault();
-          return;
-        }
-        // Flèches = navigation
-        if (
-          row !== undefined &&
-          col !== undefined &&
-          (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
-        ) {
-          const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
-          navigateFromCell(row, col, dir);
-          e.preventDefault();
-        }
-      }}
-      className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
-      title={allowClear ? "Clic puis Supprimer pour effacer · Entrée ou double-clic pour éditer" : "Clic puis Entrée pour éditer"}
-    >
-      {value !== 0 ? chfShort(value) : placeholder || "0"}
-    </button>
+    <div className="flex items-center justify-end gap-1">
+      <button
+        data-cell={dataCell}
+        onClick={() => setEditing(true)}
+        onKeyDown={(e) => {
+          if (
+            row !== undefined &&
+            col !== undefined &&
+            (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
+          ) {
+            const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
+            navigateFromCell(row, col, dir);
+            e.preventDefault();
+          }
+        }}
+        className="flex-1 text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
+        title="Clic pour éditer"
+      >
+        {value !== 0 ? chfShort(value) : placeholder || "0"}
+      </button>
+      {allowClear && value !== 0 && (
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onChange(0);
+          }}
+          className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-700 text-white text-[10px] font-bold leading-none cursor-pointer"
+          title="Effacer la valeur"
+          aria-label="Effacer"
+        >
+          ×
+        </button>
+      )}
+    </div>
   );
 }
 
