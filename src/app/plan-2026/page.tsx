@@ -1248,12 +1248,16 @@ function EditableCell({
       </button>
       {allowClear && value !== 0 && (
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onChange(0);
           }}
-          className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded px-1 text-[10px] leading-none"
+          onMouseDown={(e) => e.preventDefault()}
+          className="flex items-center justify-center shrink-0 w-5 h-5 bg-rose-100 text-rose-600 hover:bg-rose-500 hover:text-white rounded text-xs font-bold leading-none cursor-pointer border border-rose-300"
           title="Supprimer cette valeur"
+          aria-label="Supprimer"
         >
           ✕
         </button>
