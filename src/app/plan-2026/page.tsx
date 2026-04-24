@@ -501,6 +501,65 @@ export default function Plan2026Page() {
           />
         </div>
 
+        {/* ─── VENTE ATELIER SUISSE — édition rapide ─── */}
+        <div className="bg-white rounded-xl border-2 border-amber-400 p-4 md:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">🏢 Vente L&apos;Atelier Suisse</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Change le mois ou le montant — impact instantané sur la projection.
+              </p>
+            </div>
+            {plan.params.aslSaleAmount > 0 && (
+              <button
+                onClick={() => {
+                  if (confirm("Supprimer la vente Atelier Suisse (mettre à 0) ?")) {
+                    updateParams({ aslSaleAmount: 0 });
+                  }
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold"
+              >
+                Supprimer la vente
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1 font-semibold">Mois de la vente</label>
+              <select
+                value={plan.params.aslSaleMonth}
+                onChange={(e) => updateParams({ aslSaleMonth: parseInt(e.target.value, 10) })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                {MONTHS.map((m) => (
+                  <option key={m.num} value={m.num}>
+                    {m.name} 2026
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1 font-semibold">Montant (CHF)</label>
+              <input
+                type="number"
+                step={1000}
+                value={plan.params.aslSaleAmount}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  updateParams({ aslSaleAmount: Number.isNaN(v) ? 0 : v });
+                }}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums font-semibold"
+                placeholder="Ex : 70 000"
+              />
+            </div>
+          </div>
+          {plan.params.aslSaleAmount === 0 && (
+            <p className="text-xs text-gray-500 mt-3">
+              <strong>Vente désactivée.</strong> Mets un montant &gt; 0 pour la réactiver dans la projection.
+            </p>
+          )}
+        </div>
+
         {/* ─── REAL vs FORECAST CA ─── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <KpiCard
