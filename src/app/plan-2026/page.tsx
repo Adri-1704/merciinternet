@@ -7,6 +7,7 @@ import Link from "next/link";
 
 interface PlanParams {
   funkyfeetMarginPercent: number;
+  aslMarginPercent: number;
   aslSaleAmount: number;
   aslSaleMonth: number; // 1-12
   barSalary: number;
@@ -25,7 +26,7 @@ interface PlanParams {
   startingBalance: number;
 }
 
-type OverrideField = "margin" | "bar" | "asl" | "foire" | "privateCost" | "businessCost" | "debt";
+type OverrideField = "margin" | "aslMargin" | "bar" | "asl" | "foire" | "privateCost" | "businessCost" | "debt";
 
 type MonthOverrides = Partial<Record<OverrideField, number>>;
 
@@ -33,8 +34,9 @@ interface Plan2026 {
   params: PlanParams;
   forecastCA: Record<number, number>;
   actualCA: Record<number, number>;
+  aslCA: Record<number, number>; // CA Atelier Suisse par mois (jusqu'à vente)
   dailyCA: Record<string, number>; // { "2026-04-24": 150 }
-  overrides: Record<number, MonthOverrides>; // { 4: { bar: 0, privateCost: 5000 }, ... }
+  overrides: Record<number, MonthOverrides>;
   notes: string;
   lastUpdate: string;
 }
@@ -43,6 +45,7 @@ interface Plan2026 {
 
 const DEFAULT_PARAMS: PlanParams = {
   funkyfeetMarginPercent: 27.5,
+  aslMarginPercent: 30,
   aslSaleAmount: 70000,
   aslSaleMonth: 7,
   barSalary: 2200,
@@ -59,6 +62,12 @@ const DEFAULT_PARAMS: PlanParams = {
   debtEndMonth: 7,
   objective: 100000,
   startingBalance: 0,
+};
+
+// CA Atelier Suisse par mois (0 par défaut — à remplir selon activité réelle)
+// L'ASL est toujours en activité jusqu'à la vente (juillet par défaut)
+const DEFAULT_ASL_CA: Record<number, number> = {
+  4: 0, 5: 0, 6: 0, 7: 0,
 };
 
 // CA forecast avril → déc = 275 000 CHF
@@ -97,6 +106,7 @@ function loadPlan(): Plan2026 {
       params: DEFAULT_PARAMS,
       forecastCA: DEFAULT_FORECAST_CA,
       actualCA: {},
+      aslCA: DEFAULT_ASL_CA,
       dailyCA: {},
       overrides: {},
       notes: "",
@@ -111,6 +121,7 @@ function loadPlan(): Plan2026 {
         params: { ...DEFAULT_PARAMS, ...(data.params || {}) },
         forecastCA: { ...DEFAULT_FORECAST_CA, ...(data.forecastCA || {}) },
         actualCA: data.actualCA || {},
+        aslCA: { ...DEFAULT_ASL_CA, ...(data.aslCA || {}) },
         dailyCA: data.dailyCA || {},
         overrides: data.overrides || {},
         notes: data.notes || "",
@@ -124,6 +135,7 @@ function loadPlan(): Plan2026 {
     params: DEFAULT_PARAMS,
     forecastCA: DEFAULT_FORECAST_CA,
     actualCA: {},
+    aslCA: DEFAULT_ASL_CA,
     dailyCA: {},
     overrides: {},
     notes: "",
@@ -190,6 +202,11 @@ export default function Plan2026Page() {
     setPlan({ ...plan, actualCA: { ...plan.actualCA, [month]: value } });
   };
 
+  const updateAslCA = (month: number, value: number) => {
+    if (!plan) return;
+    setPlan({ ...plan, aslCA: { ...plan.aslCA, [month]: value } });
+  };
+
   const addDailyCA = () => {
     if (!plan || !dailyAmount) return;
     const amount = parseFloat(dailyAmount);
@@ -215,6 +232,7 @@ export default function Plan2026Page() {
       params: DEFAULT_PARAMS,
       forecastCA: DEFAULT_FORECAST_CA,
       actualCA: {},
+      aslCA: DEFAULT_ASL_CA,
       dailyCA: {},
       overrides: {},
       notes: "",
@@ -248,15 +266,17 @@ export default function Plan2026Page() {
 
   const rows = useMemo(() => {
     if (!plan) return [];
-    const { params, forecastCA, actualCA, overrides } = plan;
+    const { params, forecastCA, actualCA, aslCA, overrides } = plan;
     let balanceForecast = params.startingBalance;
 
     return MONTHS.map((m) => {
       const ov = overrides[m.num] || {};
       const caForecast = forecastCA[m.num] || 0;
       const caActual = actualCA[m.num] || 0;
+      const caAsl = aslCA[m.num] || 0;
 
       const autoMargin = caForecast * (params.funkyfeetMarginPercent / 100);
+      const autoAslMargin = caAsl * (params.aslMarginPercent / 100);
       const autoBar = m.num >= params.barStartMonth && m.num <= params.barEndMonth ? params.barSalary : 0;
       const autoAsl = m.num === params.aslSaleMonth ? params.aslSaleAmount : 0;
       const autoFoire = m.num === params.foireValaisMonth ? params.foireValaisAmount : 0;
@@ -266,6 +286,7 @@ export default function Plan2026Page() {
       const autoDebt = m.num <= params.debtEndMonth && m.num >= params.fixedStartMonth ? params.debtMonthly : 0;
 
       const marginForecast = ov.margin ?? autoMargin;
+      const aslMargin = ov.aslMargin ?? autoAslMargin;
       const bar = ov.bar ?? autoBar;
       const asl = ov.asl ?? autoAsl;
       const foire = ov.foire ?? autoFoire;
@@ -273,7 +294,7 @@ export default function Plan2026Page() {
       const businessCost = ov.businessCost ?? autoBusiness;
       const debt = ov.debt ?? autoDebt;
 
-      const totalInForecast = marginForecast + bar + asl + foire;
+      const totalInForecast = marginForecast + aslMargin + bar + asl + foire;
       const totalOut = privateCost + businessCost + debt;
       const netForecast = totalInForecast - totalOut;
 
@@ -283,8 +304,11 @@ export default function Plan2026Page() {
         month: m,
         caForecast,
         caActual,
+        caAsl,
         marginForecast,
         autoMargin,
+        aslMargin,
+        autoAslMargin,
         bar,
         autoBar,
         asl,
@@ -470,6 +494,12 @@ export default function Plan2026Page() {
                 step={0.5}
               />
               <ParamInput
+                label="Marge nette Atelier Suisse (%)"
+                value={plan.params.aslMarginPercent}
+                onChange={(v) => updateParams({ aslMarginPercent: v })}
+                step={0.5}
+              />
+              <ParamInput
                 label="Objectif solde 31/12 (CHF)"
                 value={plan.params.objective}
                 onChange={(v) => updateParams({ objective: v })}
@@ -577,11 +607,13 @@ export default function Plan2026Page() {
               <thead>
                 <tr className="bg-gray-900 text-white">
                   <th className="px-3 py-2 text-left font-semibold">Mois</th>
-                  <th className="px-3 py-2 text-right font-semibold bg-blue-900">CA prévu</th>
-                  <th className="px-3 py-2 text-right font-semibold bg-blue-900">CA réel</th>
+                  <th className="px-3 py-2 text-right font-semibold bg-blue-900">CA FF prévu</th>
+                  <th className="px-3 py-2 text-right font-semibold bg-blue-900">CA FF réel</th>
                   <th className="px-3 py-2 text-right font-semibold">Marge FF</th>
+                  <th className="px-3 py-2 text-right font-semibold bg-blue-900">CA ASL</th>
+                  <th className="px-3 py-2 text-right font-semibold">Marge ASL</th>
                   <th className="px-3 py-2 text-right font-semibold">Bar</th>
-                  <th className="px-3 py-2 text-right font-semibold">ASL</th>
+                  <th className="px-3 py-2 text-right font-semibold">Vente ASL</th>
                   <th className="px-3 py-2 text-right font-semibold">Foire VS</th>
                   <th className="px-3 py-2 text-right font-semibold bg-emerald-700">Total IN</th>
                   <th className="px-3 py-2 text-right font-semibold">Privé</th>
@@ -616,6 +648,22 @@ export default function Plan2026Page() {
                         overridden={r.overrides.margin !== undefined}
                         onChange={(v) => setOverride(r.month.num, "margin", v)}
                         onReset={() => clearOverride(r.month.num, "margin")}
+                      />
+                    </td>
+                    <td className="px-2 py-1 text-right bg-blue-50">
+                      <EditableCell
+                        value={r.caAsl}
+                        onChange={(v) => updateAslCA(r.month.num, v)}
+                        placeholder="—"
+                      />
+                    </td>
+                    <td className="px-2 py-1 text-right">
+                      <OverridableCell
+                        value={r.aslMargin}
+                        auto={r.autoAslMargin}
+                        overridden={r.overrides.aslMargin !== undefined}
+                        onChange={(v) => setOverride(r.month.num, "aslMargin", v)}
+                        onReset={() => clearOverride(r.month.num, "aslMargin")}
                       />
                     </td>
                     <td className="px-2 py-1 text-right">
@@ -694,6 +742,12 @@ export default function Plan2026Page() {
                   <td className="px-3 py-3 text-right tabular-nums">{chfShort(totalActualCA)}</td>
                   <td className="px-3 py-3 text-right tabular-nums">
                     {chfShort(rows.reduce((s, r) => s + r.marginForecast, 0))}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    {chfShort(rows.reduce((s, r) => s + r.caAsl, 0))}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    {chfShort(rows.reduce((s, r) => s + r.aslMargin, 0))}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.bar, 0))}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{chfShort(rows.reduce((s, r) => s + r.asl, 0))}</td>
