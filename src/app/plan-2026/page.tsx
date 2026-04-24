@@ -491,6 +491,22 @@ export default function Plan2026Page() {
             >
               Réinitialiser
             </button>
+            <button
+              onClick={() => {
+                if (confirm("⚠️ Efface TOUT et recharge la page. Confirmer ?")) {
+                  try {
+                    localStorage.removeItem(STORAGE_KEY);
+                  } catch {
+                    /* ignore */
+                  }
+                  window.location.reload();
+                }
+              }}
+              className="text-sm px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold"
+              title="Efface tout + force reload"
+            >
+              Wipe 🔥
+            </button>
           </div>
         </div>
       </header>
@@ -1263,20 +1279,26 @@ function EditableCell({
         {value !== 0 ? chfShort(value) : placeholder || "0"}
       </button>
       {allowClear && value !== 0 && (
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={(e) => {
-            e.stopPropagation();
+        <span
+          role="button"
+          tabIndex={0}
+          onPointerDown={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             onChange(0);
           }}
-          className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-700 text-white text-[10px] font-bold leading-none cursor-pointer"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onChange(0);
+            }
+          }}
+          className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-700 text-white text-[10px] font-bold leading-none cursor-pointer select-none"
           title="Effacer la valeur"
           aria-label="Effacer"
         >
           ×
-        </button>
+        </span>
       )}
     </div>
   );
