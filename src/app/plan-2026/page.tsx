@@ -468,8 +468,10 @@ export default function Plan2026Page() {
   const lastRealMonthName = lastRealRow?.month.name || null;
   const finalBalanceReal = lastRealRow?.balanceReal ?? null;
   const gap = plan ? plan.params.objective - finalBalance : 0;
-  const cashNadir = rows.reduce((min, r) => Math.min(min, r.balanceForecast), Infinity);
-  const cashNadirMonth = rows.find((r) => r.balanceForecast === cashNadir)?.month.name || "—";
+  const currentMonthNum = new Date().getMonth() + 1;
+  const futureRows = rows.filter((r) => r.month.num >= currentMonthNum);
+  const cashNadir = futureRows.reduce((min, r) => Math.min(min, r.balanceForecast), Infinity);
+  const cashNadirMonth = futureRows.find((r) => r.balanceForecast === cashNadir)?.month.name || "—";
 
   const totalForecastCA = Object.values(plan?.forecastCA || {}).reduce((s, v) => s + v, 0);
   const totalActualCA = Object.values(plan?.actualCA || {}).reduce((s, v) => s + v, 0);
