@@ -38,6 +38,7 @@ interface Plan2026 {
   forecastCA: Record<number, number>;
   actualCA: Record<number, number>;
   aslCA: Record<number, number>; // CA Atelier Suisse par mois (jusqu'à vente)
+  aslSaleByMonth: Record<number, number>; // Vente ASL par mois (cash à la signature)
   dailyCA: Record<string, number>; // { "2026-04-24": 150 }
   overrides: Record<number, MonthOverrides>;
   notes: string;
@@ -74,6 +75,12 @@ const DEFAULT_PARAMS: PlanParams = {
 // L'ASL est toujours en activité jusqu'à la vente (juillet par défaut)
 const DEFAULT_ASL_CA: Record<number, number> = {
   4: 0, 5: 0, 6: 0, 7: 0,
+};
+
+// Vente Atelier Suisse — paiement cash à la signature (achat pur)
+// Par défaut : 70 000 CHF en juillet
+const DEFAULT_ASL_SALE: Record<number, number> = {
+  7: 70000,
 };
 
 // CA forecast année complète (jan → déc)
@@ -121,6 +128,7 @@ function loadPlan(): Plan2026 {
       forecastCA: DEFAULT_FORECAST_CA,
       actualCA: {},
       aslCA: DEFAULT_ASL_CA,
+      aslSaleByMonth: DEFAULT_ASL_SALE,
       dailyCA: {},
       overrides: {},
       notes: "",
@@ -131,11 +139,19 @@ function loadPlan(): Plan2026 {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const data = JSON.parse(raw) as Partial<Plan2026>;
+      // Migration: si aslSaleByMonth absent mais params.aslSaleAmount > 0, on migre
+      const legacySale: Record<number, number> = {};
+      const legacyAmount = (data.params as PlanParams | undefined)?.aslSaleAmount;
+      const legacyMonth = (data.params as PlanParams | undefined)?.aslSaleMonth;
+      if (!data.aslSaleByMonth && legacyAmount && legacyMonth) {
+        legacySale[legacyMonth] = legacyAmount;
+      }
       return {
         params: { ...DEFAULT_PARAMS, ...(data.params || {}) },
         forecastCA: { ...DEFAULT_FORECAST_CA, ...(data.forecastCA || {}) },
         actualCA: data.actualCA || {},
         aslCA: { ...DEFAULT_ASL_CA, ...(data.aslCA || {}) },
+        aslSaleByMonth: data.aslSaleByMonth || legacySale,
         dailyCA: data.dailyCA || {},
         overrides: data.overrides || {},
         notes: data.notes || "",
@@ -150,6 +166,7 @@ function loadPlan(): Plan2026 {
     forecastCA: DEFAULT_FORECAST_CA,
     actualCA: {},
     aslCA: DEFAULT_ASL_CA,
+    aslSaleByMonth: DEFAULT_ASL_SALE,
     dailyCA: {},
     overrides: {},
     notes: "",
@@ -264,6 +281,14 @@ export default function Plan2026Page() {
     setPlan({ ...plan, aslCA: { ...plan.aslCA, [month]: value } });
   };
 
+  const updateAslSale = (month: number, value: number) => {
+    if (!plan) return;
+    const next = { ...plan.aslSaleByMonth };
+    if (value === 0) delete next[month];
+    else next[month] = value;
+    setPlan({ ...plan, aslSaleByMonth: next });
+  };
+
   const addDailyCA = () => {
     if (!plan || !dailyAmount) return;
     const amount = parseFloat(dailyAmount);
@@ -290,6 +315,7 @@ export default function Plan2026Page() {
       forecastCA: DEFAULT_FORECAST_CA,
       actualCA: {},
       aslCA: DEFAULT_ASL_CA,
+      aslSaleByMonth: DEFAULT_ASL_SALE,
       dailyCA: {},
       overrides: {},
       notes: "",
@@ -323,7 +349,7 @@ export default function Plan2026Page() {
 
   const rows = useMemo(() => {
     if (!plan) return [];
-    const { params, forecastCA, actualCA, aslCA, overrides } = plan;
+    const { params, forecastCA, actualCA, aslCA, aslSaleByMonth, overrides } = plan;
     let balanceForecast = params.startingBalance;
     let balanceReal = params.startingBalance;
 
@@ -342,7 +368,7 @@ export default function Plan2026Page() {
       const autoMargin = caForecast * (params.funkyfeetMarginPercent / 100);
       const autoAslMargin = caAsl * (params.aslMarginPercent / 100);
       const autoBar = m.num >= params.barStartMonth && m.num <= params.barEndMonth ? params.barSalary : 0;
-      const autoAsl = m.num === params.aslSaleMonth ? params.aslSaleAmount : 0;
+      const autoAsl = aslSaleByMonth[m.num] || 0;
       const autoFoire = m.num === params.foireValaisMonth ? params.foireValaisAmount : 0;
       const inFixedPeriod = m.num >= params.fixedStartMonth && m.num <= params.fixedEndMonth;
       const autoPrivate = inFixedPeriod ? params.fixedPrivate : 0;
@@ -507,56 +533,85 @@ export default function Plan2026Page() {
             <div>
               <h2 className="text-base font-bold text-gray-900">🏢 Vente L&apos;Atelier Suisse</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Change le mois ou le montant — impact instantané sur la projection.
+                Édition rapide. Tu peux aussi modifier directement la colonne "Vente ASL" dans le tableau.
               </p>
             </div>
-            {plan.params.aslSaleAmount > 0 && (
+            {Object.keys(plan.aslSaleByMonth).length > 0 && (
               <button
                 onClick={() => {
-                  if (confirm("Supprimer la vente Atelier Suisse (mettre à 0) ?")) {
-                    updateParams({ aslSaleAmount: 0 });
+                  if (confirm("Supprimer toutes les ventes Atelier Suisse ?")) {
+                    setPlan({ ...plan, aslSaleByMonth: {} });
                   }
                 }}
                 className="text-xs px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold"
               >
-                Supprimer la vente
+                Tout effacer
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1 font-semibold">Mois de la vente</label>
-              <select
-                value={plan.params.aslSaleMonth}
-                onChange={(e) => updateParams({ aslSaleMonth: parseInt(e.target.value, 10) })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          {Object.entries(plan.aslSaleByMonth).length === 0 ? (
+            <div className="bg-gray-50 rounded-lg p-4 text-center">
+              <p className="text-sm text-gray-600 mb-3">Aucune vente configurée.</p>
+              <button
+                onClick={() => updateAslSale(7, 70000)}
+                className="text-sm px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold"
               >
-                {MONTHS.map((m) => (
-                  <option key={m.num} value={m.num}>
-                    {m.name} 2026
-                  </option>
-                ))}
-              </select>
+                + Ajouter une vente (70 000 CHF en juillet)
+              </button>
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1 font-semibold">Montant (CHF)</label>
-              <input
-                type="number"
-                step={1000}
-                value={plan.params.aslSaleAmount}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  updateParams({ aslSaleAmount: Number.isNaN(v) ? 0 : v });
-                }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums font-semibold"
-                placeholder="Ex : 70 000"
-              />
+          ) : (
+            <div className="space-y-2">
+              {Object.entries(plan.aslSaleByMonth)
+                .sort(([a], [b]) => parseInt(a, 10) - parseInt(b, 10))
+                .map(([monthStr, amount]) => {
+                  const monthNum = parseInt(monthStr, 10);
+                  return (
+                    <div key={monthNum} className="grid grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1 font-semibold">Mois</label>
+                        <select
+                          value={monthNum}
+                          onChange={(e) => {
+                            const newMonth = parseInt(e.target.value, 10);
+                            if (newMonth === monthNum) return;
+                            const next = { ...plan.aslSaleByMonth };
+                            delete next[monthNum];
+                            next[newMonth] = amount;
+                            setPlan({ ...plan, aslSaleByMonth: next });
+                          }}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                        >
+                          {MONTHS.map((m) => (
+                            <option key={m.num} value={m.num}>
+                              {m.name} 2026
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1 font-semibold">Montant (CHF)</label>
+                        <input
+                          type="number"
+                          step={1000}
+                          value={amount}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            updateAslSale(monthNum, Number.isNaN(v) ? 0 : v);
+                          }}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums font-semibold"
+                        />
+                      </div>
+                      <button
+                        onClick={() => updateAslSale(monthNum, 0)}
+                        className="px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold"
+                        title="Supprimer cette vente"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
             </div>
-          </div>
-          {plan.params.aslSaleAmount === 0 && (
-            <p className="text-xs text-gray-500 mt-3">
-              <strong>Vente désactivée.</strong> Mets un montant &gt; 0 pour la réactiver dans la projection.
-            </p>
           )}
         </div>
 
@@ -746,19 +801,6 @@ export default function Plan2026Page() {
                 max={12}
               />
               <ParamInput
-                label="Vente ASL — montant (CHF)"
-                value={plan.params.aslSaleAmount}
-                onChange={(v) => updateParams({ aslSaleAmount: v })}
-                step={5000}
-              />
-              <ParamInput
-                label="Vente ASL — mois"
-                value={plan.params.aslSaleMonth}
-                onChange={(v) => updateParams({ aslSaleMonth: v })}
-                min={1}
-                max={12}
-              />
-              <ParamInput
                 label="Foire du Valais — montant (CHF)"
                 value={plan.params.foireValaisAmount}
                 onChange={(v) => updateParams({ foireValaisAmount: v })}
@@ -890,13 +932,11 @@ export default function Plan2026Page() {
                         col={6}
                       />
                     </td>
-                    <td className="px-1 py-0.5 text-right">
-                      <OverridableCell
+                    <td className="px-1 py-0.5 text-right bg-blue-50">
+                      <EditableCell
                         value={r.asl}
-                        auto={r.autoAsl}
-                        overridden={r.overrides.asl !== undefined}
-                        onChange={(v) => setOverride(r.month.num, "asl", v)}
-                        onReset={() => clearOverride(r.month.num, "asl")}
+                        onChange={(v) => updateAslSale(r.month.num, v)}
+                        placeholder="—"
                         row={i}
                         col={7}
                       />
