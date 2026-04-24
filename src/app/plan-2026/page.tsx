@@ -1217,52 +1217,49 @@ function EditableCell({
   }
 
   return (
-    <div className="flex items-center justify-end gap-0.5">
-      <button
-        data-cell={dataCell}
-        onClick={() => setEditing(true)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === "F2") {
-            setEditing(true);
-            e.preventDefault();
-          } else if (
-            allowClear &&
-            value !== 0 &&
-            (e.key === "Delete" || e.key === "Backspace")
-          ) {
-            onChange(0);
-            e.preventDefault();
-          } else if (
-            row !== undefined &&
-            col !== undefined &&
-            (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
-          ) {
-            const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
-            navigateFromCell(row, col, dir);
-            e.preventDefault();
-          }
-        }}
-        className="flex-1 text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
-      >
-        {value !== 0 ? chfShort(value) : placeholder || "0"}
-      </button>
-      {allowClear && value !== 0 && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            onChange(0);
-          }}
-          onMouseDown={(e) => e.preventDefault()}
-          className="flex items-center justify-center shrink-0 w-5 h-5 bg-rose-100 text-rose-600 hover:bg-rose-500 hover:text-white rounded text-xs font-bold leading-none cursor-pointer border border-rose-300"
-          title="Supprimer cette valeur"
-          aria-label="Supprimer"
-        >
-          ✕
-        </button>
-      )}
-    </div>
+    <button
+      data-cell={dataCell}
+      onClick={(e) => {
+        // Excel-style: single click = focus only (pas d'édition)
+        (e.currentTarget as HTMLButtonElement).focus();
+      }}
+      onDoubleClick={() => setEditing(true)}
+      onKeyDown={(e) => {
+        // Enter / F2 = entre en mode édition
+        if (e.key === "Enter" || e.key === "F2") {
+          setEditing(true);
+          e.preventDefault();
+          return;
+        }
+        // Delete / Backspace = efface la valeur (comme Excel)
+        if (allowClear && (e.key === "Delete" || e.key === "Backspace")) {
+          onChange(0);
+          e.preventDefault();
+          return;
+        }
+        // Taper un chiffre ou le signe − = entre en édition et remplace
+        if (/^[0-9]$/.test(e.key) || e.key === "-") {
+          setDraft(e.key);
+          setEditing(true);
+          e.preventDefault();
+          return;
+        }
+        // Flèches = navigation
+        if (
+          row !== undefined &&
+          col !== undefined &&
+          (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
+        ) {
+          const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
+          navigateFromCell(row, col, dir);
+          e.preventDefault();
+        }
+      }}
+      className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
+      title={allowClear ? "Clic puis Supprimer pour effacer · Entrée ou double-clic pour éditer" : "Clic puis Entrée pour éditer"}
+    >
+      {value !== 0 ? chfShort(value) : placeholder || "0"}
+    </button>
   );
 }
 
@@ -1358,9 +1355,20 @@ function OverridableCell({
     <div className="flex items-center justify-end gap-0.5">
       <button
         data-cell={dataCell}
-        onClick={() => setEditing(true)}
+        onClick={(e) => {
+          (e.currentTarget as HTMLButtonElement).focus();
+        }}
+        onDoubleClick={() => setEditing(true)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === "F2") {
+            setEditing(true);
+            e.preventDefault();
+          } else if (e.key === "Delete" || e.key === "Backspace") {
+            // Delete = revient à l'auto (reset override)
+            if (overridden) onReset();
+            e.preventDefault();
+          } else if (/^[0-9]$/.test(e.key) || e.key === "-") {
+            setDraft(e.key);
             setEditing(true);
             e.preventDefault();
           } else if (
@@ -1371,13 +1379,10 @@ function OverridableCell({
             const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
             navigateFromCell(row, col, dir);
             e.preventDefault();
-          } else if (overridden && (e.key === "Delete" || e.key === "Backspace")) {
-            onReset();
-            e.preventDefault();
           }
         }}
         className={`text-right tabular-nums rounded px-0.5 py-0.5 whitespace-nowrap focus:outline focus:outline-2 focus:outline-amber-500 ${displayColor}`}
-        title={overridden ? `Override manuel (auto = ${chfShort(auto)}) — Suppr pour reset` : "Clic pour override"}
+        title={overridden ? `Override (auto = ${chfShort(auto)}) · Suppr pour reset · Entrée/double-clic pour éditer` : "Entrée ou double-clic pour éditer"}
       >
         {value !== 0 ? chfShort(value) : "—"}
       </button>
@@ -1385,7 +1390,7 @@ function OverridableCell({
         <button
           onClick={onReset}
           className="text-amber-500 hover:text-amber-700 text-[9px] leading-none"
-          title="Supprimer l'override (revenir à l'auto)"
+          title="Revenir à la valeur auto"
         >
           ↺
         </button>
