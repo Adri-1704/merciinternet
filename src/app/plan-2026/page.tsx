@@ -24,6 +24,9 @@ interface PlanParams {
   debtEndMonth: number;
   objective: number;
   startingBalance: number;
+  anchorMonth: number;     // Mois de référence (fin de mois) pour fixer le solde
+  anchorBalance: number;   // Solde fixé à la fin du mois de référence
+  anchorEnabled: boolean;  // Si true, on cale le tableau sur l'ancre
 }
 
 type OverrideField = "margin" | "aslMargin" | "bar" | "asl" | "foire" | "privateCost" | "businessCost" | "debt";
@@ -62,6 +65,9 @@ const DEFAULT_PARAMS: PlanParams = {
   debtEndMonth: 7,
   objective: 100000,
   startingBalance: 0,
+  anchorMonth: 4,       // fin avril
+  anchorBalance: 0,     // solde 0 CHF au 30 avril
+  anchorEnabled: true,  // activé par défaut
 };
 
 // CA Atelier Suisse par mois (0 par défaut — à remplir selon activité réelle)
@@ -277,7 +283,7 @@ export default function Plan2026Page() {
     const { params, forecastCA, actualCA, aslCA, overrides } = plan;
     let balanceForecast = params.startingBalance;
 
-    return MONTHS.map((m) => {
+    const computed = MONTHS.map((m) => {
       const ov = overrides[m.num] || {};
       const caForecast = forecastCA[m.num] || 0;
       const caActual = actualCA[m.num] || 0;
@@ -336,6 +342,20 @@ export default function Plan2026Page() {
         overrides: ov,
       };
     });
+
+    // Ancrage : si activé, on décale toute la série de soldes
+    // pour que le solde à la fin du mois d'ancrage soit égal à anchorBalance.
+    if (params.anchorEnabled) {
+      const anchorRow = computed.find((r) => r.month.num === params.anchorMonth);
+      if (anchorRow) {
+        const shift = params.anchorBalance - anchorRow.balanceForecast;
+        computed.forEach((r) => {
+          r.balanceForecast += shift;
+        });
+      }
+    }
+
+    return computed;
   }, [plan]);
 
   const finalBalance = rows.length ? rows[rows.length - 1].balanceForecast : 0;
@@ -514,11 +534,42 @@ export default function Plan2026Page() {
                 step={1000}
               />
               <ParamInput
-                label="Solde de départ (CHF)"
+                label="Solde de départ (CHF) — 1er janvier"
                 value={plan.params.startingBalance}
                 onChange={(v) => updateParams({ startingBalance: v })}
                 step={500}
               />
+              <div className="col-span-1 md:col-span-2 p-3 bg-violet-50 rounded-lg border border-violet-200">
+                <label className="flex items-center gap-2 mb-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={plan.params.anchorEnabled}
+                    onChange={(e) => updateParams({ anchorEnabled: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm font-semibold text-violet-900">
+                    Ancrer le solde sur un mois précis
+                  </span>
+                </label>
+                <p className="text-[11px] text-violet-800 mb-2">
+                  Recadrage auto de la trésorerie : fixe le solde à une date connue, les autres mois se recalculent.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <ParamInput
+                    label="Mois d'ancrage (1-12)"
+                    value={plan.params.anchorMonth}
+                    onChange={(v) => updateParams({ anchorMonth: v })}
+                    min={1}
+                    max={12}
+                  />
+                  <ParamInput
+                    label="Solde fin de mois (CHF)"
+                    value={plan.params.anchorBalance}
+                    onChange={(v) => updateParams({ anchorBalance: v })}
+                    step={500}
+                  />
+                </div>
+              </div>
               <ParamInput
                 label="Frais fixes privés / mois (CHF)"
                 value={plan.params.fixedPrivate}
