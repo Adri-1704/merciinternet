@@ -888,6 +888,7 @@ export default function Plan2026Page() {
                         placeholder="—"
                         row={i}
                         col={2}
+                        allowClear
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -908,6 +909,7 @@ export default function Plan2026Page() {
                         placeholder="—"
                         row={i}
                         col={4}
+                        allowClear
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -939,6 +941,7 @@ export default function Plan2026Page() {
                         placeholder="—"
                         row={i}
                         col={7}
+                        allowClear
                       />
                     </td>
                     <td className="px-1 py-0.5 text-right">
@@ -1143,12 +1146,14 @@ function EditableCell({
   placeholder,
   row,
   col,
+  allowClear,
 }: {
   value: number;
   onChange: (v: number) => void;
   placeholder?: string;
   row?: number;
   col?: number;
+  allowClear?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value.toString());
@@ -1212,27 +1217,48 @@ function EditableCell({
   }
 
   return (
-    <button
-      data-cell={dataCell}
-      onClick={() => setEditing(true)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === "F2") {
-          setEditing(true);
-          e.preventDefault();
-        } else if (
-          row !== undefined &&
-          col !== undefined &&
-          (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
-        ) {
-          const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
-          navigateFromCell(row, col, dir);
-          e.preventDefault();
-        }
-      }}
-      className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
-    >
-      {value !== 0 ? chfShort(value) : placeholder || "0"}
-    </button>
+    <div className="flex items-center justify-end gap-0.5">
+      <button
+        data-cell={dataCell}
+        onClick={() => setEditing(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === "F2") {
+            setEditing(true);
+            e.preventDefault();
+          } else if (
+            allowClear &&
+            value !== 0 &&
+            (e.key === "Delete" || e.key === "Backspace")
+          ) {
+            onChange(0);
+            e.preventDefault();
+          } else if (
+            row !== undefined &&
+            col !== undefined &&
+            (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
+          ) {
+            const dir = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
+            navigateFromCell(row, col, dir);
+            e.preventDefault();
+          }
+        }}
+        className="flex-1 text-right tabular-nums text-blue-900 hover:bg-blue-100 focus:bg-blue-200 focus:outline focus:outline-2 focus:outline-blue-500 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
+      >
+        {value !== 0 ? chfShort(value) : placeholder || "0"}
+      </button>
+      {allowClear && value !== 0 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange(0);
+          }}
+          className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded px-1 text-[10px] leading-none"
+          title="Supprimer cette valeur"
+        >
+          ✕
+        </button>
+      )}
+    </div>
   );
 }
 
