@@ -917,7 +917,7 @@ function EditableCell({
       onClick={() => setEditing(true)}
       className="w-full text-right tabular-nums text-blue-900 hover:bg-blue-100 rounded px-0.5 py-0.5 font-semibold whitespace-nowrap"
     >
-      {value > 0 ? chfShort(value) : placeholder || "0"}
+      {value !== 0 ? chfShort(value) : placeholder || "0"}
     </button>
   );
 }
@@ -971,8 +971,10 @@ function OverridableCell({
   }
 
   const displayColor = overridden
-    ? "text-amber-700 hover:bg-amber-100 font-bold"
-    : value > 0
+    ? value < 0
+      ? "text-rose-700 hover:bg-rose-100 font-bold"
+      : "text-amber-700 hover:bg-amber-100 font-bold"
+    : value !== 0
     ? "text-gray-700 hover:bg-gray-100"
     : "text-gray-300 hover:bg-gray-100";
 
@@ -983,7 +985,7 @@ function OverridableCell({
         className={`text-right tabular-nums rounded px-0.5 py-0.5 whitespace-nowrap ${displayColor}`}
         title={overridden ? `Override manuel (auto = ${chfShort(auto)})` : "Clic pour override"}
       >
-        {value > 0 ? chfShort(value) : "—"}
+        {value !== 0 ? chfShort(value) : "—"}
       </button>
       {overridden && (
         <button
