@@ -327,6 +327,12 @@ export default function Plan2026Page() {
     let balanceForecast = params.startingBalance;
     let balanceReal = params.startingBalance;
 
+    // Dernier mois avec un CA réel saisi (> 0)
+    // Au-delà, le "Solde réel" sera masqué (affiché "—")
+    const lastRealMonth = MONTHS.reduce((max, m) => {
+      return (actualCA[m.num] || 0) > 0 ? m.num : max;
+    }, 0);
+
     const computed = MONTHS.map((m) => {
       const ov = overrides[m.num] || {};
       const caForecast = forecastCA[m.num] || 0;
@@ -394,6 +400,7 @@ export default function Plan2026Page() {
         netReal,
         balanceForecast,
         balanceReal,
+        hasReal: m.num <= lastRealMonth && lastRealMonth > 0,
         overrides: ov,
       };
     });
@@ -416,7 +423,9 @@ export default function Plan2026Page() {
   }, [plan]);
 
   const finalBalance = rows.length ? rows[rows.length - 1].balanceForecast : 0;
-  const finalBalanceReal = rows.length ? rows[rows.length - 1].balanceReal : 0;
+  const lastRealRow = [...rows].reverse().find((r) => r.hasReal);
+  const lastRealMonthName = lastRealRow?.month.name || null;
+  const finalBalanceReal = lastRealRow?.balanceReal ?? null;
   const gap = plan ? plan.params.objective - finalBalance : 0;
   const cashNadir = rows.reduce((min, r) => Math.min(min, r.balanceForecast), Infinity);
   const cashNadirMonth = rows.find((r) => r.balanceForecast === cashNadir)?.month.name || "—";
@@ -468,9 +477,17 @@ export default function Plan2026Page() {
             accent={finalBalance >= plan.params.objective ? "success" : "warning"}
           />
           <KpiCard
-            label="Solde réel fin année"
-            value={chf(finalBalanceReal)}
-            accent={finalBalanceReal >= plan.params.objective ? "success" : finalBalanceReal >= 0 ? "neutral" : "danger"}
+            label={lastRealMonthName ? `Solde réel (fin ${lastRealMonthName})` : "Solde réel"}
+            value={finalBalanceReal !== null ? chf(finalBalanceReal) : "—"}
+            accent={
+              finalBalanceReal === null
+                ? "neutral"
+                : finalBalanceReal >= plan.params.objective
+                ? "success"
+                : finalBalanceReal >= 0
+                ? "neutral"
+                : "danger"
+            }
           />
           <KpiCard
             label={gap <= 0 ? "Objectif dépassé de" : "Écart à combler (prévu)"}
@@ -484,20 +501,24 @@ export default function Plan2026Page() {
           />
         </div>
 
-        {/* ─── REAL vs FORECAST ─── */}
+        {/* ─── REAL vs FORECAST CA ─── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <KpiCard label="CA YTD réalisé (jan → 23 avr.)" value={chf(25000)} accent="neutral" />
-          <KpiCard label="CA prévu (avril → déc)" value={chf(totalForecastCA)} accent="neutral" />
           <KpiCard
-            label="CA FunkyFeet réel saisi"
+            label="CA FF total prévu (année)"
+            value={chf(totalForecastCA)}
+            accent="neutral"
+          />
+          <KpiCard
+            label={lastRealMonthName ? `CA FF réel cumulé (→ ${lastRealMonthName})` : "CA FF réel cumulé"}
             value={chf(totalActualCA)}
             accent={totalActualCA > 0 ? "success" : "neutral"}
           />
+          <KpiCard
+            label="Progression vs objectif 300k"
+            value={`${Math.round((totalActualCA / 300000) * 100)} %`}
+            accent={totalActualCA >= 300000 ? "success" : totalActualCA >= 150000 ? "warning" : "neutral"}
+          />
         </div>
-        <p className="text-xs text-gray-500 -mt-3 px-1">
-          Objectif année : <strong>300 000 CHF</strong> (25 000 YTD + 275 000 reste à faire).
-          La marge YTD (~6 875 CHF = 25k × 27,5%) n'est pas dans le tableau : ajoute-la au solde de départ dans les paramètres si tu veux en tenir compte.
-        </p>
 
         {/* ─── DAILY INPUT ─── */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-5">
@@ -877,8 +898,8 @@ export default function Plan2026Page() {
                     <td className={`px-1.5 py-1 text-right tabular-nums font-bold whitespace-nowrap ${r.balanceForecast >= 0 ? "text-violet-800 bg-violet-50" : "text-rose-700 bg-rose-50"}`}>
                       {chfShort(r.balanceForecast)}
                     </td>
-                    <td className={`px-1.5 py-1 text-right tabular-nums font-bold whitespace-nowrap ${r.balanceReal >= 0 ? "text-emerald-800 bg-emerald-50" : "text-rose-700 bg-rose-50"}`}>
-                      {chfShort(r.balanceReal)}
+                    <td className={`px-1.5 py-1 text-right tabular-nums font-bold whitespace-nowrap ${!r.hasReal ? "text-gray-300 bg-gray-50" : r.balanceReal >= 0 ? "text-emerald-800 bg-emerald-50" : "text-rose-700 bg-rose-50"}`}>
+                      {r.hasReal ? chfShort(r.balanceReal) : "—"}
                     </td>
                   </tr>
                 ))}
@@ -916,7 +937,10 @@ export default function Plan2026Page() {
                     {chfShort(finalBalance)}
                   </td>
                   <td className="px-1.5 py-2 text-right tabular-nums text-emerald-800 bg-emerald-100">
-                    {chfShort(rows.length ? rows[rows.length - 1].balanceReal : 0)}
+                    {(() => {
+                      const lastRealRow = [...rows].reverse().find((r) => r.hasReal);
+                      return lastRealRow ? chfShort(lastRealRow.balanceReal) : "—";
+                    })()}
                   </td>
                 </tr>
               </tfoot>
